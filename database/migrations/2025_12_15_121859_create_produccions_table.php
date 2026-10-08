@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('produccions', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
+            $table->unsignedBigInteger('numero');
+            $table->unique(['tenant_id', 'numero']);
             $table->foreignId('formula_id')->constrained('formulas')->onDelete('cascade');
             $table->foreignId('bodega_id')->constrained('bodegas')->onDelete('cascade');
             $table->integer('cantidad');

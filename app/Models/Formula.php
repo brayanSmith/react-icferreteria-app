@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Formula extends Model
 {
+    use BelongsToTenant;
+
     //
     use HasFactory;
+
     protected $fillable = ['nombre_formula', 'descripcion_formula'];
 
     public function detalleFormulas()
@@ -20,5 +24,4 @@ class Formula extends Model
     {
         return $this->hasMany(Produccion::class);
     }
-
 }

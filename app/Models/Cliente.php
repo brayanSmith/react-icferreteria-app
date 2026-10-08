@@ -2,15 +2,21 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
+use App\Models\Concerns\TieneNumeroConsecutivo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Cliente extends Model
 {
+    use BelongsToTenant;
+
     //
     use HasFactory;
     use SoftDeletes;
+    use TieneNumeroConsecutivo;
+
     protected $fillable = [
         'tipo_documento',
         'numero_documento',
@@ -39,23 +45,27 @@ class Cliente extends Model
     {
         return $this->hasMany(Pedido::class);
     }
+
     public function ruta()
     {
         return $this->belongsTo(Ruta::class, 'ruta_id');
     }
+
     public function comercial()
     {
         return $this->belongsTo(User::class, 'comercial_id');
     }
+
     public function estadoPagoEnCartera()
     {
         return $this->hasMany(Pedido::class)
-                    ->where('estado_pago', 'EN_CARTERA');
+            ->where('estado_pago', 'EN_CARTERA');
     }
+
     public function estadoPagoSaldados()
     {
         return $this->hasMany(Pedido::class)
-                    ->where('estado_pago', 'SALDADO');
+            ->where('estado_pago', 'SALDADO');
     }
 
     /**
@@ -63,7 +73,7 @@ class Cliente extends Model
      */
     public function getRutaCompletaAttribute(): string
     {
-        if (!$this->ruta) {
+        if (! $this->ruta) {
             return 'Sin ruta asignada';
         }
 
@@ -74,6 +84,7 @@ class Cliente extends Model
             ? "Ruta: {$rutaNombre} - {$rutaDescripcion}"
             : "Ruta: {$rutaNombre}";
     }
+
     // Calcular la suma del saldo_pendiente de los pedidos que están en estado VENCIDO
     public function getTotalVencidoAttribute(): float
     {
@@ -83,6 +94,7 @@ class Cliente extends Model
             return $pedido->estado_pago === 'VENCIDO';
         })->sum('saldo_pendiente');
     }
+
     // Calcular la suma del saldo_pendiente de los pedidos que están en estado CARTERA
     public function getTotalCarteraAttribute(): float
     {
@@ -93,5 +105,4 @@ class Cliente extends Model
                    ($pedido->estado === 'FACTURADO' || $pedido->estado === 'EN_RUTA' || $pedido->estado === 'ENTREGADO');
         })->sum('saldo_pendiente');
     }
-
 }

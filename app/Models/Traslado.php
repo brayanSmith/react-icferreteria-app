@@ -2,21 +2,28 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
+use App\Models\Concerns\TieneNumeroConsecutivo;
+use Database\Factories\TrasladoFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Traslado extends Model
 {
-    /** @use HasFactory<\Database\Factories\TrasladoFactory> */
+    use BelongsToTenant;
+
+    /** @use HasFactory<TrasladoFactory> */
     use HasFactory;
+
     use SoftDeletes;
+    use TieneNumeroConsecutivo;
 
     protected $fillable = [
         'bodega_donante_id',
         'bodega_destino_id',
-        //'producto_id',
-        //'cantidad',
+        // 'producto_id',
+        // 'cantidad',
         'observaciones',
         'created_at',
         'updated_at',
@@ -27,14 +34,17 @@ class Traslado extends Model
     {
         return $this->belongsTo(Bodega::class, 'bodega_donante_id');
     }
+
     public function bodegaDestino()
     {
         return $this->belongsTo(Bodega::class, 'bodega_destino_id');
     }
+
     public function detalles()
     {
         return $this->hasMany(DetalleTraslado::class, 'traslado_id');
     }
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');

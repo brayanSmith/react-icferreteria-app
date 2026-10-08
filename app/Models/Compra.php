@@ -2,17 +2,24 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
+use App\Models\Concerns\TieneNumeroConsecutivo;
+use Database\Factories\CompraFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Services\CompraCalculoService;
 
 class Compra extends Model
 {
-    /** @use HasFactory<\Database\Factories\CompraFactory> */
+    use BelongsToTenant;
+
+    /** @use HasFactory<CompraFactory> */
     use HasFactory;
+
     use SoftDeletes;
+    use TieneNumeroConsecutivo;
+
     protected $fillable = [
         'offline_uuid',
         'factura',
@@ -54,21 +61,22 @@ class Compra extends Model
     protected function titulo(): Attribute
     {
         return Attribute::make(
-            get: fn() => "{$this->id} - {$this->factura}",
+            get: fn () => "{$this->id} - {$this->factura}",
         );
     }
+
     public function detallesCompra()
     {
         return $this->hasMany(DetalleCompra::class);
     }
+
     public function abonoCompra()
     {
         return $this->hasMany(AbonoCompra::class);
     }
+
     public function bodega()
     {
         return $this->belongsTo(Bodega::class, 'bodega_id');
     }
-
-
 }

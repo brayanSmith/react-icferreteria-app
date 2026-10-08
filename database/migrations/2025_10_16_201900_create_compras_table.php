@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -14,9 +13,14 @@ return new class extends Migration
     {
         Schema::create('compras', function (Blueprint $table) {
             $table->id();
-            $table->string('offline_uuid')->nullable()->unique();
+            $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
+            $table->unsignedBigInteger('numero');
+            $table->unique(['tenant_id', 'numero']);
+            $table->string('offline_uuid')->nullable();
+            $table->unique(['tenant_id', 'offline_uuid']);
             $table->enum('item_compra', ['PRODUCTO', 'GASTO'])->default('PRODUCTO');
-            $table->string('factura')->unique();
+            $table->string('factura');
+            $table->unique(['tenant_id', 'factura']);
             $table->enum('categoria_compra', ['MATERIA_PRIMA', 'PRODUCTO_TERMINADO', 'OTRO'])->default('PRODUCTO_TERMINADO');
             $table->foreignId('proveedor_id')->constrained('proveedors');
             $table->dateTime('fecha')->nullable();
@@ -25,14 +29,14 @@ return new class extends Migration
             $table->enum('metodo_pago', ['CREDITO', 'CONTADO'])->default('CREDITO');
             $table->enum('estado_pago', ['EN_CARTERA', 'SALDADO'])->default('EN_CARTERA');
             $table->boolean('stock_sumado')->default(false);
-            $table->enum('tipo_compra', ['ELECTRONICA','REMISIONADA'])->default('REMISIONADA');
+            $table->enum('tipo_compra', ['ELECTRONICA', 'REMISIONADA'])->default('REMISIONADA');
             $table->enum('estado', ['PENDIENTE', 'FACTURADO', 'ANULADO'])->default(value: 'PENDIENTE');
             $table->text('observaciones')->nullable();
             $table->decimal('subtotal', 12, 2)->default(0);
             $table->decimal('abono', 12, 2)->default(0)->nullable();
-            //Nuevo campo
+            // Nuevo campo
             $table->decimal('retefuente', 12, 2)->default(0)->nullable();
-            //fin nuevo campo
+            // fin nuevo campo
             $table->decimal('reteica', 12, 2)->default(0)->nullable();
             $table->decimal('flete', 12, 2)->default(0)->nullable();
             $table->decimal('descuento', 12, 2)->default(0)->nullable();

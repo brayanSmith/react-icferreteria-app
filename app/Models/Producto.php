@@ -2,13 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
+use App\Models\Concerns\TieneNumeroConsecutivo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Producto extends Model
 {
+    use BelongsToTenant;
+
     //
     use HasFactory;
+    use SoftDeletes;
+    use TieneNumeroConsecutivo;
 
     protected $fillable = [
         'categoria_producto',
@@ -109,7 +116,7 @@ class Producto extends Model
             'MAYORISTA' => $this->valor_mayorista_producto ?? 0,
             'FERRETERO' => $this->valor_ferretero_producto ?? 0,
             'ESPECIAL' => $this->valor_especial_producto ?? 0,
-            default     => $this->valor_detal_producto ?? 0,
+            default => $this->valor_detal_producto ?? 0,
         };
     }
 
@@ -124,7 +131,8 @@ class Producto extends Model
 
         return $stock >= (float) $cantidad;
     }
-    //esta funcion calcula el stock actual restando las salidas a las entradas
+
+    // esta funcion calcula el stock actual restando las salidas a las entradas
     public function getStockAttribute($value): float
     {
         $entradas = (float) ($this->entradas ?? 0);
@@ -132,7 +140,6 @@ class Producto extends Model
 
         return $entradas - $salidas;
     }
-
 
     /**
      * The "booted" method of the model.

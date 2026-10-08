@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('comisions', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->foreignId('vendedor_id')->constrained('users')->onDelete('cascade');
             $table->date('periodo_inicial');
             $table->date('periodo_final');
             $table->enum('estado_comision', ['PENDIENTE', 'PAGADA', 'RECHAZADA'])->default('PENDIENTE');
-
 
             $table->decimal('monto_contado_electronico', 15, 2)->default(0);
             $table->decimal('monto_contado_remisionada', 15, 2)->default(0);
@@ -32,7 +32,6 @@ return new class extends Migration
             $table->decimal('total_calculado_credito', 15, 2)->default(0);
             $table->decimal('porcentaje_comision_credito', 5, 2)->default(0);
             $table->decimal('comision_calculada_credito', 15, 2)->default(0);
-
 
             $table->decimal('monto_venta_remisionada', 15, 2)->default(0);
             $table->decimal('iva_venta_remisionada', 5, 2)->default(0);

@@ -2,15 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
+use Database\Factories\ProveedorFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Proveedor extends Model
 {
-    /** @use HasFactory<\Database\Factories\ProveedorFactory> */
+    use BelongsToTenant;
+
+    /** @use HasFactory<ProveedorFactory> */
     use HasFactory;
 
-
+    use SoftDeletes;
 
     protected $fillable = [
         'id',
@@ -31,7 +36,7 @@ class Proveedor extends Model
         'tiempo_respuesta',
         'fabricante',
         'flete',
-        'valor_flete'
+        'valor_flete',
     ];
 
     public function compras()

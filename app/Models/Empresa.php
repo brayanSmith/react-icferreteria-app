@@ -2,13 +2,19 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Perfil de la empresa de un tenant (nombre, NIT, logo, etc.). Cada tenant
+ * tiene una sola y puede editarla sin intervención del super administrador.
+ */
 class Empresa extends Model
 {
-    //
+    use BelongsToTenant;
     use HasFactory;
+
     protected $fillable = [
         'nombre_empresa',
         'direccion_empresa',
@@ -19,18 +25,10 @@ class Empresa extends Model
         'icono_empresa',
         'cuentas_bancarias',
         'mostrar_productos_sin_inventario',
-        'bodega_id',
     ];
 
     protected $casts = [
         'cuentas_bancarias' => 'array',
         'mostrar_productos_sin_inventario' => 'boolean',
     ];
-
-    public function bodega()
-    {
-        return $this->belongsTo(Bodega::class);
-    }
-
-
 }

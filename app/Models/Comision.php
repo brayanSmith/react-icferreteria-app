@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\BelongsToTenant;
 use App\Services\ComisionService;
+use Illuminate\Database\Eloquent\Model;
 
 class Comision extends Model
 {
+    use BelongsToTenant;
+
     //
     protected $fillable = [
         'vendedor_id',
@@ -46,14 +49,17 @@ class Comision extends Model
         'porcentaje_comision_credito',
         'comision_calculada_credito',
     ];
+
     public function vendedor()
     {
         return $this->belongsTo(User::class, 'vendedor_id');
     }
+
     public function detallesComisionPedidos()
     {
         return $this->hasMany(DetalleComisionPedido::class, 'comision_id');
     }
+
     public function detallesComisionAbonos()
     {
         return $this->hasMany(DetalleComisionAbono::class, 'comision_id');
@@ -112,7 +118,4 @@ class Comision extends Model
             $this->ajuste_comision ?? 0
         );
     }
-
-
-
 }

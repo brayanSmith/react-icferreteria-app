@@ -2,17 +2,22 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Casts\Attribute;
+use App\Models\Concerns\BelongsToTenant;
+use App\Models\Concerns\TieneNumeroConsecutivo;
+use App\Services\Pedido\PedidoCalculoService;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Services\Pedido\PedidoCalculoService;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Pedido extends Model
 {
+    use BelongsToTenant;
+
     //
     use HasFactory;
     use SoftDeletes;
+    use TieneNumeroConsecutivo;
 
     protected $fillable = [
         'codigo',
@@ -69,10 +74,12 @@ class Pedido extends Model
         'fecha_vencimiento' => 'datetime',
         'fecha_ultimo_abono' => 'datetime',
     ];
+
     public function cliente()
     {
         return $this->belongsTo(Cliente::class, 'cliente_id');
     }
+
     // Un pedido de CONTADO no tiene plazo: dias_plazo_vencimiento = 0 y vence el
     // mismo dia de la venta (fecha_vencimiento = fecha). Se fuerza aqui, al
     // guardar, para cubrir todos los origenes (POS, POS supermercado, tienda,
@@ -92,6 +99,7 @@ class Pedido extends Model
     {
         return $this->hasMany(DetallePedido::class);
     }
+
     public function abonoPedido()
     {
         return $this->hasMany(Abono::class);
@@ -102,34 +110,42 @@ class Pedido extends Model
     {
         return $this->hasMany(Abono::class);
     }
+
     public function bodega()
     {
         return $this->belongsTo(Bodega::class, 'bodega_id');
     }
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
     public function alistador()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
     public function empacador()
     {
         return $this->belongsTo(User::class, 'empacador_id');
     }
+
     public function eliminadoPor()
     {
         return $this->belongsTo(User::class, 'eliminado_por');
     }
+
     public function detallesComision()
     {
         return $this->hasMany(DetalleComisionPedido::class, 'pedido_id');
     }
+
     public function notasDocumento()
     {
         return $this->hasMany(NotaDocumento::class, 'pedido_id');
     }
+
     public function detallePedidoGuias()
     {
         return $this->hasMany(DetallePedidoGuia::class, 'pedido_id');
@@ -138,7 +154,7 @@ class Pedido extends Model
     public function setCodigoPedido()
     {
         $nuevoCodigo = PedidoCalculoService::generarCodigoPedido($this->id);
-            $this->updateQuietly(['codigo' => $nuevoCodigo]);
+        $this->updateQuietly(['codigo' => $nuevoCodigo]);
     }
 
     // Atributo: devolver fecha en America/Bogota
@@ -147,7 +163,7 @@ class Pedido extends Model
         if (is_null($value)) {
             return null;
         }
-        return \Carbon\Carbon::parse($value)->setTimezone('America/Bogota');
-    }
 
+        return Carbon::parse($value)->setTimezone('America/Bogota');
+    }
 }

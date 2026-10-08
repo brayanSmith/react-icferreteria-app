@@ -13,14 +13,16 @@ return new class extends Migration
     {
         Schema::create('pucs', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->enum('tipo', ['1', '2', '3', '4', '5', '6', '7', '8', '9']);
             $table->string('cuenta');
-            $table->string('subcuenta')->unique();
-            $table->string('concepto');  
+            $table->string('subcuenta');
+            $table->unique(['tenant_id', 'subcuenta']);
+            $table->string('concepto');
             $table->string('descripcion')->nullable();
             $table->string('concatenar_subcuenta_concepto')->default('');
             $table->timestamps();
-            
+
         });
     }
 

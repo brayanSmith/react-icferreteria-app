@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Medida extends Model
 {
+    use BelongsToTenant;
+
     //
-    Use HasFactory;
+    use HasFactory;
 
     protected $fillable = ['nombre_medida', 'descripcion_medida', 'tipo_medida'];
 
@@ -21,9 +24,9 @@ class Medida extends Model
     {
         return $this->hasMany(Producto::class);
     }
+
     public function detallePedidoGuias()
     {
         return $this->hasMany(DetallePedidoGuia::class, 'medida_id');
     }
-
 }

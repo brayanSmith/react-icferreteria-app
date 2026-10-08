@@ -22,6 +22,7 @@ return new class extends Migration
             $table->string('imagen_abono_compra')->nullable();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

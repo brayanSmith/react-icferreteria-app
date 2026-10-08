@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('empresas', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('tenant_id')->unique()->constrained('tenants')->cascadeOnDelete();
             $table->string('nombre_empresa');
             $table->string('direccion_empresa')->nullable();
             $table->string('telefono_empresa')->nullable();
@@ -22,7 +23,6 @@ return new class extends Migration
             $table->string('icono_empresa')->nullable();
             $table->json('cuentas_bancarias')->nullable();
             $table->boolean('mostrar_productos_sin_inventario')->default(true);
-            $table->foreignId('bodega_id')->nullable()->constrained('bodegas')->onDelete('set null');
             $table->timestamps();
         });
     }

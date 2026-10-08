@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('tenant_id')->nullable()->constrained('tenants')->cascadeOnDelete();
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
@@ -20,11 +21,14 @@ return new class extends Migration
             $table->text('two_factor_secret')->nullable();
             $table->text('two_factor_recovery_codes')->nullable();
             $table->timestamp('two_factor_confirmed_at')->nullable();
-             $table->string('n_documento')->unique();
+            $table->string('n_documento');
+            $table->unique(['tenant_id', 'n_documento']);
             $table->boolean('activo')->default(true);
-            $table->string('cod_vendedor')->nullable();            
+            $table->boolean('es_super_admin')->default(false);
+            $table->string('cod_vendedor')->nullable();
             $table->rememberToken();
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

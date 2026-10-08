@@ -13,13 +13,18 @@ return new class extends Migration
     {
         Schema::create('clientes', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
+            $table->unsignedBigInteger('numero');
+            $table->unique(['tenant_id', 'numero']);
             $table->string('tipo_documento');
-            $table->string('numero_documento')->unique();
+            $table->string('numero_documento');
+            $table->unique(['tenant_id', 'numero_documento']);
             $table->string('razon_social');
             $table->string('direccion')->nullable();
             $table->string('telefono')->nullable();
             $table->string('ciudad')->nullable();
-            $table->string('email')->nullable()->unique();
+            $table->string('email')->nullable();
+            $table->unique(['tenant_id', 'email']);
             $table->string('representante_legal')->nullable();
             $table->boolean('activo')->default(true);
             $table->string('novedad')->nullable();
@@ -32,7 +37,7 @@ return new class extends Migration
             $table->decimal('saldo_total_pedidos_en_cartera', 12, 2)->default(0)->nullable();
             $table->decimal('saldo_total_pedidos_vencidos', 12, 2)->default(0)->nullable();
             $table->decimal('limite_credito', 12, 2)->default(0)->nullable();
-            //Nuevos Campos
+            // Nuevos Campos
             $table->string('categoria')->nullable();
             $table->string('sector')->nullable();
 

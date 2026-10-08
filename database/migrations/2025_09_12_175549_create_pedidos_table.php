@@ -14,7 +14,11 @@ return new class extends Migration
     {
         Schema::create('pedidos', function (Blueprint $table) {
             $table->id();
-            $table->string('codigo')->unique()->nullable();
+            $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
+            $table->unsignedBigInteger('numero');
+            $table->unique(['tenant_id', 'numero']);
+            $table->string('codigo')->nullable();
+            $table->unique(['tenant_id', 'codigo']);
             $table->string('fe')->nullable();
             $table->foreignId('cliente_id')->constrained('clientes');
             $table->dateTime('fecha')->default(DB::raw('CURRENT_TIMESTAMP'));
@@ -23,14 +27,15 @@ return new class extends Migration
             $table->string('ciudad')->nullable();
             $table->enum('estado', ['PENDIENTE', 'FACTURADO', 'ANULADO', 'EN_RUTA', 'ENTREGADO', 'DEVUELTO'])->default(value: 'PENDIENTE');
             $table->boolean('stock_retirado')->default(false);
-            $table->string('offline_uuid')->nullable()->unique();
+            $table->string('offline_uuid')->nullable();
+            $table->unique(['tenant_id', 'offline_uuid']);
             $table->string('referencia')->nullable();
             $table->boolean('en_cartera')->default(false);
             $table->enum('metodo_pago', ['CREDITO', 'CONTADO'])->default('CREDITO');
-            //Modificacion
-            $table->enum('tipo_precio', ['FERRETERO','MAYORISTA', 'DETAL', 'ESPECIAL'])->default('FERRETERO');
-            //Fin Modificacion
-            $table->enum('tipo_venta', ['ELECTRONICA','REMISIONADA'])->default('REMISIONADA');
+            // Modificacion
+            $table->enum('tipo_precio', ['FERRETERO', 'MAYORISTA', 'DETAL', 'ESPECIAL'])->default('FERRETERO');
+            // Fin Modificacion
+            $table->enum('tipo_venta', ['ELECTRONICA', 'REMISIONADA'])->default('REMISIONADA');
             $table->enum('estado_pago', allowed: ['EN_CARTERA', 'SALDADO'])->default('EN_CARTERA');
             $table->enum('estado_cartera', ['CARTERA_AL_DIA', 'CARTERA_VENCIDA', 'CARTERA_PAGADA', 'NO_APLICA'])->nullable();
             $table->enum('estado_venta', ['COTIZACION', 'VENTA'])->default('VENTA');
@@ -45,9 +50,9 @@ return new class extends Migration
             $table->decimal('abono', 12, 2)->default(0);
             $table->decimal('descuento', 12, 2)->default(0)->nullable();
             $table->decimal('retefuente', 12, 2)->default(0)->nullable();
-            //Nuevo Campo
+            // Nuevo Campo
             $table->decimal('reteica', 12, 2)->default(0)->nullable();
-            //Fin Nuevo Campo
+            // Fin Nuevo Campo
             $table->decimal('flete', 12, 2)->default(0)->nullable();
             $table->decimal('total_nota_credito', 12, 2)->default(0);
             $table->decimal('total_nota_debito', 12, 2)->default(0);

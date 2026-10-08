@@ -13,7 +13,9 @@ return new class extends Migration
     {
         Schema::create('medidas', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre_medida')->unique();
+            $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
+            $table->string('nombre_medida');
+            $table->unique(['tenant_id', 'nombre_medida']);
             $table->enum('tipo_medida', ['LONGITUD', 'PESO', 'VOLUMEN', 'CANTIDAD'])->default('CANTIDAD');
             $table->string('descripcion_medida')->nullable();
             $table->timestamps();
@@ -21,7 +23,9 @@ return new class extends Migration
 
         Schema::create('bodegas', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre_bodega')->unique();
+            $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
+            $table->string('nombre_bodega');
+            $table->unique(['tenant_id', 'nombre_bodega']);
             $table->string('ubicacion_bodega')->nullable();
             $table->timestamps();
             $table->softDeletes();
@@ -29,21 +33,28 @@ return new class extends Migration
 
         Schema::create('categorias', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre_categoria')->unique();
+            $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
+            $table->string('nombre_categoria');
+            $table->unique(['tenant_id', 'nombre_categoria']);
             $table->timestamps();
         });
 
         Schema::create('sub_categorias', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre_sub_categoria')->unique();
+            $table->string('nombre_sub_categoria');
+            $table->unique(['categoria_id', 'nombre_sub_categoria']);
             $table->foreignId('categoria_id')->constrained('categorias')->onDelete('cascade');
             $table->timestamps();
         });
 
         Schema::create('productos', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
+            $table->unsignedBigInteger('numero');
+            $table->unique(['tenant_id', 'numero']);
             $table->enum('categoria_producto', ['MATERIA_PRIMA', 'PRODUCTO_TERMINADO', 'OTRO', 'DESCUENTO', 'GASTOS'])->default('PRODUCTO_TERMINADO');
-            $table->string('codigo_producto')->unique();
+            $table->string('codigo_producto');
+            $table->unique(['tenant_id', 'codigo_producto']);
             $table->string('nombre_producto');
             $table->string('descripcion_producto')->nullable();
             $table->decimal('costo_producto', 10, 2)->default(0);
@@ -70,15 +81,16 @@ return new class extends Migration
             $table->string('codigo_cliente')->nullable();
             $table->enum('volumen_producto', ['EXTRA_GRANDE', 'GRANDE', 'MEDIANO', 'PEQUEÑO', 'EXTRA_PEQUEÑO'])->nullable();
             $table->float('iva_producto')->default(0)->nullable();
-            $table->enum('tipo_compra',['NACIONAL','IMPORTADO'])->nullable();
+            $table->enum('tipo_compra', ['NACIONAL', 'IMPORTADO'])->nullable();
             $table->string('concatenar_codigo_nombre')->nullable();
-            //Nuevos Campos
+            // Nuevos Campos
             $table->string('codigo_barra')->nullable();
             $table->string('marca')->nullable();
             $table->text('detalles_producto')->nullable();
             $table->text('codigo_importado')->nullable();
 
             $table->timestamps();
+            $table->softDeletes();
         });
 
     }

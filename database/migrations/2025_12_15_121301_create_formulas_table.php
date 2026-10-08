@@ -13,9 +13,11 @@ return new class extends Migration
     {
         Schema::create('formulas', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre_formula')->unique();
+            $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
+            $table->string('nombre_formula');
+            $table->unique(['tenant_id', 'nombre_formula']);
             $table->text('descripcion_formula')->nullable();
-            //$table->foreignId('unidad_medida_id')->constrained('unidades_medida')->onDelete('cascade');
+            // $table->foreignId('unidad_medida_id')->constrained('unidades_medida')->onDelete('cascade');
             $table->timestamps();
         });
     }
