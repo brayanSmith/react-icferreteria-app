@@ -40,7 +40,7 @@ class BodegaController extends Controller implements HasMiddleware
         $eliminadas = $request->boolean('eliminadas');
 
         $bodegas = Bodega::query()
-            ->withCount('productos')
+            ->withCount(['stockIniciales as productos_count'])
             ->when($eliminadas, fn ($query) => $query->onlyTrashed())
             ->orderBy('nombre_bodega')
             ->get();
@@ -77,12 +77,11 @@ class BodegaController extends Controller implements HasMiddleware
 
     /**
      * Elimina (de forma lógica) una bodega, salvo que todavía tenga
-     * productos, movimientos o inventario asociados.
+     * pedidos, compras, traslados o inventario (stock inicial) asociados.
      */
     public function destroy(Bodega $bodega): RedirectResponse
     {
-        $enUso = $bodega->productos()->withTrashed()->exists()
-            || $bodega->pedidos()->withTrashed()->exists()
+        $enUso = $bodega->pedidos()->withTrashed()->exists()
             || $bodega->compras()->withTrashed()->exists()
             || $bodega->trasladosComoDonante()->withTrashed()->exists()
             || $bodega->trasladosComoDestino()->withTrashed()->exists()
@@ -91,7 +90,7 @@ class BodegaController extends Controller implements HasMiddleware
 
         if ($enUso) {
             return $this->rechazarEliminacion(
-                'No puedes eliminar esta bodega porque tiene productos o movimientos asociados.',
+                'No puedes eliminar esta bodega porque tiene inventario o movimientos asociados.',
                 'gestion.bodegas.index',
             );
         }

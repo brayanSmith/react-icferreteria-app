@@ -1,6 +1,7 @@
 import InputError from '@/components/input-error';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { ESTILO_CELDA } from './estilo-celda';
 import SearchableSelect from './searchable-select';
 
 export type OpcionDeSelect = { valor: string | number; etiqueta: string };
@@ -16,6 +17,8 @@ type SelectFieldProps = {
     /** Se usa como `name` y, con el prefijo "campo-", como `id` del selector. */
     name: string;
     etiqueta: string;
+    /** Oculta la etiqueta a la vista pero la deja para lectores de pantalla (filas repetidas). */
+    etiquetaOculta?: boolean;
     opciones: OpcionDeSelect[];
     /** Texto de la primera opción vacía (por ejemplo, "Selecciona una medida"). */
     placeholder?: string;
@@ -29,6 +32,8 @@ type SelectFieldProps = {
     onValueChange?: (valor: string) => void;
     disabled?: boolean;
     required?: boolean;
+    /** Aspecto de celda de hoja de cálculo: sin borde visible (para tablas editables). */
+    plano?: boolean;
 };
 
 /**
@@ -43,6 +48,7 @@ type SelectFieldProps = {
 export default function SelectField({
     name,
     etiqueta,
+    etiquetaOculta = false,
     opciones,
     placeholder,
     error,
@@ -52,13 +58,19 @@ export default function SelectField({
     onValueChange,
     disabled,
     required,
+    plano = false,
 }: SelectFieldProps) {
     const id = `campo-${name}`;
     const conBuscador = opciones.length > UMBRAL_BUSQUEDA;
 
     return (
         <div className={cn('grid gap-2', className)}>
-            <Label htmlFor={id}>{etiqueta}</Label>
+            <Label
+                htmlFor={id}
+                className={etiquetaOculta ? 'sr-only' : undefined}
+            >
+                {etiqueta}
+            </Label>
 
             {conBuscador ? (
                 <SearchableSelect
@@ -72,6 +84,7 @@ export default function SelectField({
                     permitirVacio={placeholder !== undefined}
                     disabled={disabled}
                     invalid={error !== undefined}
+                    plano={plano}
                 />
             ) : (
                 <select
@@ -88,6 +101,7 @@ export default function SelectField({
                         'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none',
                         'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
                         'disabled:cursor-not-allowed disabled:opacity-50',
+                        plano && ESTILO_CELDA,
                     )}
                 >
                     {placeholder !== undefined && (

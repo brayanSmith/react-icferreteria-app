@@ -13,6 +13,8 @@ type RadioGroupFieldProps = {
     /** Cuántas opciones por fila en pantallas anchas. */
     columnas?: 2 | 3 | 4;
     error?: string;
+    /** Se llama con el valor de la opción elegida (para reaccionar al cambio). */
+    onValueChange?: (valor: string) => void;
 };
 
 /**
@@ -30,6 +32,7 @@ export default function RadioGroupField({
     defaultValue,
     columnas = 2,
     error,
+    onValueChange,
 }: RadioGroupFieldProps) {
     return (
         <fieldset className="grid gap-2">
@@ -64,6 +67,9 @@ export default function RadioGroupField({
                                 defaultChecked={
                                     String(opcion.valor) ===
                                     String(defaultValue)
+                                }
+                                onChange={() =>
+                                    onValueChange?.(String(opcion.valor))
                                 }
                                 className="size-4 accent-primary"
                             />

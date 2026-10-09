@@ -2,7 +2,11 @@
 
 use App\Http\Controllers\Gestion\BodegaController;
 use App\Http\Controllers\Gestion\CategoriaController;
+use App\Http\Controllers\Gestion\ClienteController;
 use App\Http\Controllers\Gestion\EmpresaController;
+use App\Http\Controllers\Gestion\ExportacionController;
+use App\Http\Controllers\Gestion\FormulaController;
+use App\Http\Controllers\Gestion\ImportacionController;
 use App\Http\Controllers\Gestion\MedidaController;
 use App\Http\Controllers\Gestion\ProductoController;
 use App\Http\Controllers\Gestion\ProveedorController;
@@ -41,6 +45,12 @@ Route::middleware(['auth', 'verified', 'has-tenant'])
         Route::post('bodegas/{bodega}/restore', [BodegaController::class, 'restore'])
             ->withTrashed()->name('bodegas.restore');
 
+        Route::resource('formulas', FormulaController::class)->only(['index', 'store', 'update', 'destroy']);
+
+        Route::resource('clientes', ClienteController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::post('clientes/{cliente}/restore', [ClienteController::class, 'restore'])
+            ->withTrashed()->name('clientes.restore');
+
         Route::resource('proveedores', ProveedorController::class)
             ->parameters(['proveedores' => 'proveedor'])
             ->only(['index', 'store', 'update', 'destroy']);
@@ -57,6 +67,13 @@ Route::middleware(['auth', 'verified', 'has-tenant'])
         Route::post('productos/{producto}/restore', [ProductoController::class, 'restore'])
             ->withTrashed()->name('productos.restore');
         // ----------------------------------------------------------------------
+
+        // Importar (CSV, en segundo plano) y exportar (CSV, TXT, XLSX, PDF) los módulos registrados.
+        Route::get('importar/{modulo}/plantilla', [ImportacionController::class, 'plantilla'])->name('importar.plantilla');
+        Route::post('importar/{modulo}', [ImportacionController::class, 'store'])->name('importar.store');
+        Route::post('importaciones/{importacion}/confirmar', [ImportacionController::class, 'confirmar'])->name('importar.confirmar');
+        Route::delete('importaciones/{importacion}', [ImportacionController::class, 'destroy'])->name('importar.destroy');
+        Route::get('exportar/{modulo}/{formato}', ExportacionController::class)->name('exportar');
 
         Route::resource('roles', RoleController::class)->only(['index', 'store', 'update', 'destroy']);
 

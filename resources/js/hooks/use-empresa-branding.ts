@@ -3,6 +3,14 @@ import { useLayoutEffect } from 'react';
 import { setNombreMarca } from '@/lib/brand';
 import type { EmpresaMarca } from '@/types';
 
+/** Variables CSS de color que comparte el servidor (ver Empresa::variablesDeColor). */
+const VARIABLES_DE_COLOR = [
+    '--marca',
+    '--marca-oscuro',
+    '--menu',
+    '--menu-oscuro',
+];
+
 /**
  * Aplica la marca de la empresa del usuario: el nombre en el título de la
  * pestaña y el ícono como favicon. Se monta en los diseños de página, así que
@@ -15,6 +23,34 @@ import type { EmpresaMarca } from '@/types';
 export function useEmpresaBranding(): void {
     const { marca } = usePage<{ marca: EmpresaMarca | null }>().props;
     const iconoUrl = marca?.icono_url ?? null;
+    // Se serializa para que el efecto solo corra cuando cambian los colores.
+    const colores = JSON.stringify(marca?.colores ?? {});
+
+    // Los colores de la empresa se exponen como variables y atributos de la
+    // raíz; app.css los usa para teñir los controles y el menú.
+    useLayoutEffect(() => {
+        const raiz = document.documentElement;
+        const aplicados: Record<string, string> = JSON.parse(colores);
+
+        VARIABLES_DE_COLOR.forEach((variable) => {
+            const valor = aplicados[variable];
+            const atributo = `data-${variable.slice(2)}`;
+
+            [variable, `${variable}-foreground`].forEach((nombre) => {
+                if (aplicados[nombre]) {
+                    raiz.style.setProperty(nombre, aplicados[nombre]);
+                } else {
+                    raiz.style.removeProperty(nombre);
+                }
+            });
+
+            if (valor) {
+                raiz.setAttribute(atributo, '');
+            } else {
+                raiz.removeAttribute(atributo);
+            }
+        });
+    }, [colores]);
 
     // Durante el render (y no en un efecto) para que también valga en SSR y
     // esté lista antes de que Inertia recalcule el título.

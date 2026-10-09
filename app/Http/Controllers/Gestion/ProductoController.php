@@ -8,7 +8,6 @@ use App\Http\Controllers\Concerns\EsCrudDeGestion;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Gestion\GuardarProductoRequest;
 use App\Http\Resources\ProductoResource;
-use App\Models\Bodega;
 use App\Models\Categoria;
 use App\Models\Medida;
 use App\Models\Producto;
@@ -17,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -24,7 +24,7 @@ use Inertia\Response;
  * Catálogo de productos del tenant.
  *
  * Se listan con búsqueda y paginación, se eliminan de forma lógica y se pueden
- * restaurar. El formulario necesita los catálogos de medidas, bodegas y
+ * restaurar. El formulario necesita los catálogos de medidas y
  * categorías (con sus subcategorías), que se envían junto al listado.
  */
 class ProductoController extends Controller implements HasMiddleware
@@ -41,24 +41,33 @@ class ProductoController extends Controller implements HasMiddleware
 
     /**
      * Lista los productos, filtrando por código, nombre, marca o código de
-     * barras, y opcionalmente solo los eliminados.
+     * barras, por tipo de producto (las pestañas) y, opcionalmente, solo los
+     * eliminados. Devuelve además cuántos productos hay en cada pestaña.
      */
     public function index(Request $request): Response
     {
+        $tipo = $request->query('tipo');
+
         $filtros = [
             'buscar' => (string) $request->query('buscar', ''),
             'eliminados' => $request->boolean('eliminados'),
+            // Solo se aceptan los tipos conocidos; cualquier otro valor equivale a "todos".
+            'tipo' => in_array($tipo, GuardarProductoRequest::CATEGORIAS_PRODUCTO, true) ? $tipo : null,
         ];
 
-        $productos = Producto::query()
-            ->with(['medida:id,nombre_medida', 'bodega:id,nombre_bodega', 'categoria:id,nombre_categoria', 'subCategoria:id,nombre_sub_categoria'])
+        // Base común (búsqueda y eliminados) que comparten el listado y el conteo de las pestañas.
+        $base = fn () => Producto::query()
             ->when($filtros['eliminados'], fn ($query) => $query->onlyTrashed())
             ->when($filtros['buscar'] !== '', fn ($query) => $query->where(function ($query) use ($filtros): void {
                 $query->where('codigo_producto', 'like', "%{$filtros['buscar']}%")
                     ->orWhere('nombre_producto', 'like', "%{$filtros['buscar']}%")
                     ->orWhere('marca', 'like', "%{$filtros['buscar']}%")
                     ->orWhere('codigo_barra', 'like', "%{$filtros['buscar']}%");
-            }))
+            }));
+
+        $productos = $base()
+            ->with(['medida:id,nombre_medida', 'categoria:id,nombre_categoria', 'subCategoria:id,nombre_sub_categoria'])
+            ->when($filtros['tipo'], fn ($query, $tipoElegido) => $query->where('categoria_producto', $tipoElegido))
             ->orderBy('nombre_producto')
             ->paginate(15)
             ->withQueryString();
@@ -66,16 +75,26 @@ class ProductoController extends Controller implements HasMiddleware
         return Inertia::render('gestion/productos/index', [
             'productos' => ProductoResource::collection($productos),
             'filtros' => $filtros,
+            'conteoPorTipo' => $base()
+                ->selectRaw('categoria_producto, count(*) as total')
+                ->groupBy('categoria_producto')
+                ->pluck('total', 'categoria_producto'),
             ...$this->catalogosDelFormulario(),
         ]);
     }
 
     /**
-     * Crea un producto. El texto "código - nombre" se arma solo.
+     * Crea un producto. El código se genera solo según el tipo de producto
+     * (MP-001, PT-001...) y el texto "código - nombre" se arma a partir de él.
      */
     public function store(GuardarProductoRequest $request, GuardarArchivoPublico $archivos): RedirectResponse
     {
-        Producto::create($this->datosParaGuardar($request, $archivos));
+        // Todo en una transacción: si el guardado falla, el consecutivo se devuelve.
+        DB::transaction(function () use ($request, $archivos): void {
+            $codigo = Producto::siguienteCodigo($request->user()->tenant_id, $request->validated('categoria_producto'));
+
+            Producto::create($this->datosParaGuardar($request, $archivos, $codigo));
+        });
 
         $this->avisarExito('Producto creado.');
 
@@ -87,7 +106,8 @@ class ProductoController extends Controller implements HasMiddleware
      */
     public function update(GuardarProductoRequest $request, Producto $producto, GuardarArchivoPublico $archivos): RedirectResponse
     {
-        $producto->update($this->datosParaGuardar($request, $archivos, $producto));
+        // El código no cambia nunca: identifica al producto aunque cambie su tipo o su nombre.
+        $producto->update($this->datosParaGuardar($request, $archivos, $producto->codigo_producto, $producto));
 
         $this->avisarExito('Producto actualizado.');
 
@@ -130,7 +150,6 @@ class ProductoController extends Controller implements HasMiddleware
     {
         return [
             'medidas' => Medida::query()->orderBy('nombre_medida')->get(['id', 'nombre_medida']),
-            'bodegas' => Bodega::query()->orderBy('nombre_bodega')->get(['id', 'nombre_bodega']),
             'categorias' => Categoria::query()
                 ->with(['subCategorias' => fn ($query) => $query->orderBy('nombre_sub_categoria')->select(['id', 'categoria_id', 'nombre_sub_categoria'])])
                 ->orderBy('nombre_categoria')
@@ -149,11 +168,11 @@ class ProductoController extends Controller implements HasMiddleware
 
     /**
      * Separa los campos del producto de los de la imagen, resuelve la ruta
-     * final de la imagen y arma el texto "código - nombre".
+     * final de la imagen y fija el código y el texto "código - nombre".
      *
      * @return array<string, mixed>
      */
-    private function datosParaGuardar(GuardarProductoRequest $request, GuardarArchivoPublico $archivos, ?Producto $producto = null): array
+    private function datosParaGuardar(GuardarProductoRequest $request, GuardarArchivoPublico $archivos, string $codigo, ?Producto $producto = null): array
     {
         $datos = Arr::except($request->validated(), ['imagen', 'quitar_imagen']);
 
@@ -163,7 +182,8 @@ class ProductoController extends Controller implements HasMiddleware
             $request->boolean('quitar_imagen'),
             "productos/{$request->user()->tenant_id}",
         );
-        $datos['concatenar_codigo_nombre'] = "{$datos['codigo_producto']} - {$datos['nombre_producto']}";
+        $datos['codigo_producto'] = $codigo;
+        $datos['concatenar_codigo_nombre'] = "{$codigo} - {$datos['nombre_producto']}";
 
         return $datos;
     }

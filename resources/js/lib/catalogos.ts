@@ -65,8 +65,8 @@ export const VOLUMENES_PRODUCTO: OpcionDeSelect[] = [
     { valor: 'EXTRA_GRANDE', etiqueta: 'Extra grande' },
 ];
 
-/** Origen del producto: se guarda en el campo "tipo_producto". */
-export const TIPOS_PRODUCTO: OpcionDeSelect[] = [
+/** Origen de la compra del producto: nacional o importado. */
+export const TIPOS_COMPRA: OpcionDeSelect[] = [
     { valor: 'NACIONAL', etiqueta: 'Nacional' },
     { valor: 'IMPORTADO', etiqueta: 'Importado' },
 ];
@@ -85,3 +85,22 @@ export function etiquetaDe(
         valor
     );
 }
+
+export const TIPOS_DOCUMENTO: OpcionDeSelect[] = [
+    { valor: 'NIT', etiqueta: 'NIT' },
+    { valor: 'CC', etiqueta: 'Cédula de ciudadanía' },
+    { valor: 'CE', etiqueta: 'Cédula de extranjería' },
+    { valor: 'TI', etiqueta: 'Tarjeta de identidad' },
+    { valor: 'PASAPORTE', etiqueta: 'Pasaporte' },
+    { valor: 'OTRO', etiqueta: 'Otro' },
+];
+
+export const TIPOS_CLIENTE: OpcionDeSelect[] = [
+    { valor: 'ELECTRONICO', etiqueta: 'Electrónico' },
+    { valor: 'REMISIONADO', etiqueta: 'Remisionado' },
+];
+
+export const RETENEDOR_FUENTE: OpcionDeSelect[] = [
+    { valor: 'NO', etiqueta: 'No' },
+    { valor: 'SI', etiqueta: 'Sí' },
+];

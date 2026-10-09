@@ -3,6 +3,7 @@
 namespace Tests\Feature\Gestion;
 
 use App\Models\Bodega;
+use App\Models\StockInicial;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -85,14 +86,33 @@ class BodegaCrudTest extends TestCase
         $this->assertNotSoftDeleted($bodega);
     }
 
-    public function test_no_elimina_una_bodega_con_productos(): void
+    public function test_no_elimina_una_bodega_con_inventario(): void
     {
         $catalogos = $this->catalogosBasicosDe($this->tenant);
-        $this->crearProductoEn($this->tenant, $catalogos);
+        $producto = $this->crearProductoEn($this->tenant, $catalogos);
+        $this->crearEn(StockInicial::class, $this->tenant, [
+            'producto_id' => $producto->id,
+            'bodega_id' => $catalogos['bodega']->id,
+            'cantidad' => 5,
+        ]);
 
         $this->delete(route('gestion.bodegas.destroy', $catalogos['bodega']))->assertRedirect();
 
         $this->assertNotSoftDeleted($catalogos['bodega']);
+    }
+
+    public function test_el_listado_cuenta_los_productos_con_stock_inicial_de_cada_bodega(): void
+    {
+        $catalogos = $this->catalogosBasicosDe($this->tenant);
+        $producto = $this->crearProductoEn($this->tenant, $catalogos);
+        $this->crearEn(StockInicial::class, $this->tenant, [
+            'producto_id' => $producto->id,
+            'bodega_id' => $catalogos['bodega']->id,
+            'cantidad' => 5,
+        ]);
+
+        $this->get(route('gestion.bodegas.index'))
+            ->assertInertia(fn ($page) => $page->where('bodegas.data.0.productos_count', 1));
     }
 
     public function test_no_toca_bodegas_de_otro_tenant(): void

@@ -255,6 +255,50 @@ class EmpresaManagementTest extends TestCase
             ->assertSee('<title>'.config('app.name').'</title>', false);
     }
 
+    public function test_guarda_los_colores_y_los_comparte_con_su_color_de_texto(): void
+    {
+        $this->put(route('gestion.empresa.update'), $this->datos([
+            'color_primario' => '#FFD700',
+            'color_menu_oscuro' => '#1e3a8a',
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('empresas', [
+            'tenant_id' => $this->tenant->id,
+            'color_primario' => '#ffd700',
+            'color_primario_oscuro' => null,
+            'color_menu_oscuro' => '#1e3a8a',
+        ]);
+
+        $this->get(route('dashboard'))
+            ->assertInertia(fn ($page) => $page
+                ->where('marca.colores', [
+                    '--marca' => '#ffd700',
+                    '--marca-foreground' => '#171717',
+                    '--menu-oscuro' => '#1e3a8a',
+                    '--menu-oscuro-foreground' => '#fafafa',
+                ]))
+            ->assertSee('--marca: #ffd700;', false)
+            ->assertSee("setAttribute('data-menu-oscuro', '')", false)
+            ->assertDontSee("setAttribute('data-menu', '')", false);
+    }
+
+    public function test_los_colores_vacios_restablecen_los_predeterminados(): void
+    {
+        $this->put(route('gestion.empresa.update'), $this->datos(['color_primario' => '#2563eb', 'color_menu' => '#111111']));
+        $this->put(route('gestion.empresa.update'), $this->datos(['color_primario' => '', 'color_menu' => '']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('empresas', ['tenant_id' => $this->tenant->id, 'color_primario' => null, 'color_menu' => null]);
+    }
+
+    public function test_rechaza_un_color_que_no_es_hexadecimal(): void
+    {
+        foreach (['color_primario', 'color_primario_oscuro', 'color_menu', 'color_menu_oscuro'] as $campo) {
+            $this->put(route('gestion.empresa.update'), $this->datos([$campo => 'rojo']))
+                ->assertSessionHasErrors($campo);
+        }
+    }
+
     public function test_ver_y_editar_son_permisos_distintos(): void
     {
         $soloVer = $this->personalConPermisos($this->tenant, ['empresa.ver']);

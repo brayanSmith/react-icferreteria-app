@@ -28,6 +28,7 @@ enum Modulo: string
     case Bodegas = 'bodegas';
     case Rutas = 'rutas';
     case StockInicial = 'stock_inicial';
+    case Formulas = 'formulas';
 
     public function etiqueta(): string
     {
@@ -49,6 +50,7 @@ enum Modulo: string
             self::Bodegas => 'Bodegas',
             self::Rutas => 'Rutas',
             self::StockInicial => 'Stock inicial',
+            self::Formulas => 'Fórmulas',
         };
     }
 

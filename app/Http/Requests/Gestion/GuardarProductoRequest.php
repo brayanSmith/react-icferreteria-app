@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Gestion;
 
 use App\Models\Producto;
-use App\Rules\UniqueConPapelera;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -50,13 +49,6 @@ class GuardarProductoRequest extends FormRequest
 
         return [
             'categoria_producto' => ['required', Rule::in(self::CATEGORIAS_PRODUCTO)],
-            // Los productos se eliminan de forma lógica: el código sigue reservado hasta restaurarlo.
-            'codigo_producto' => [
-                'required',
-                'string',
-                'max:100',
-                new UniqueConPapelera(Producto::class, 'codigo_producto', $this->route('producto')?->id),
-            ],
             'nombre_producto' => ['required', 'string', 'max:255'],
             'descripcion_producto' => ['nullable', 'string', 'max:255'],
 
@@ -68,7 +60,6 @@ class GuardarProductoRequest extends FormRequest
             'iva_producto' => ['nullable', 'numeric', 'min:0', 'max:100'],
 
             'medida_id' => ['required', Rule::exists('medidas', 'id')->where('tenant_id', $tenantId)],
-            'bodega_id' => ['required', Rule::exists('bodegas', 'id')->where('tenant_id', $tenantId)->whereNull('deleted_at')],
             'categoria_id' => ['required', Rule::exists('categorias', 'id')->where('tenant_id', $tenantId)],
             // Selects dependientes: la subcategoría debe ser de la categoría elegida.
             'sub_categoria_id' => [
@@ -78,8 +69,7 @@ class GuardarProductoRequest extends FormRequest
 
             'alerta_producto' => ['nullable', 'integer', 'min:0'],
             'activo' => ['boolean'],
-            // El tipo del producto indica su origen: nacional o importado.
-            'tipo_producto' => ['nullable', Rule::in(self::TIPOS_COMPRA)],
+            'tipo_producto' => ['nullable', 'string', 'max:100'],
             'peso_producto' => ['nullable', 'numeric', 'min:0', 'max:999999'],
             'ubicacion_producto' => ['nullable', 'string', 'max:255'],
             'empaquetado_externo' => ['nullable', 'string', 'max:255'],

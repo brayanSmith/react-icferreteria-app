@@ -6,7 +6,9 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import { normalizarTexto } from '@/lib/text';
 import { cn } from '@/lib/utils';
+import { ESTILO_CELDA } from './estilo-celda';
 import type { OpcionDeSelect } from './select-field';
 
 type SearchableSelectProps = {
@@ -25,15 +27,9 @@ type SearchableSelectProps = {
     permitirVacio?: boolean;
     disabled?: boolean;
     invalid?: boolean;
+    /** Aspecto de celda de hoja de cálculo: sin borde visible (para tablas editables). */
+    plano?: boolean;
 };
-
-/** Minúsculas y sin tildes, para que "camion" encuentre "Camión". */
-function normalizar(texto: string): string {
-    return texto
-        .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '')
-        .toLowerCase();
-}
 
 /**
  * Selector con buscador, para listas largas: se escribe para filtrar y se
@@ -54,6 +50,7 @@ export default function SearchableSelect({
     permitirVacio = false,
     disabled = false,
     invalid = false,
+    plano = false,
 }: SearchableSelectProps) {
     const controlado = value !== undefined;
     const [interno, setInterno] = useState(
@@ -69,7 +66,7 @@ export default function SearchableSelect({
     // Entradas de la lista: la opción vacía (si se permite y no se está buscando) y las que coinciden.
     const entradas = useMemo(() => {
         const coincidentes = opciones.filter((opcion) =>
-            normalizar(opcion.etiqueta).includes(normalizar(texto)),
+            normalizarTexto(opcion.etiqueta).includes(normalizarTexto(texto)),
         );
 
         return permitirVacio && texto === ''
@@ -157,6 +154,7 @@ export default function SearchableSelect({
                         'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
                         'disabled:cursor-not-allowed disabled:opacity-50',
                         'aria-invalid:border-destructive',
+                        plano && ESTILO_CELDA,
                     )}
                 >
                     <span

@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import ProductoController from '@/actions/App/Http/Controllers/Gestion/ProductoController';
 import ConfirmDeleteDialog from '@/components/crud/confirm-delete-dialog';
 import CrudTable from '@/components/crud/crud-table';
+import FilterTabs from '@/components/crud/filter-tabs';
 import FormDialog from '@/components/crud/form-dialog';
 import ListFilters from '@/components/crud/list-filters';
 import PageHeader from '@/components/crud/page-header';
@@ -10,7 +11,7 @@ import ProductoFields from '@/components/productos/producto-fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCan } from '@/hooks/use-can';
-import { index as bodegasIndex } from '@/routes/gestion/bodegas';
+import { CATEGORIAS_PRODUCTO } from '@/lib/catalogos';
 import { index as categoriasIndex } from '@/routes/gestion/categorias';
 import { index as medidasIndex } from '@/routes/gestion/medidas';
 import { index, restore } from '@/routes/gestion/productos';
@@ -18,11 +19,21 @@ import type { CategoriaOpcion, Paginated, Producto } from '@/types';
 
 type Props = {
     productos: Paginated<Producto>;
-    filtros: { buscar: string; eliminados: boolean };
+    filtros: { buscar: string; eliminados: boolean; tipo: string | null };
+    /** Cantidad de productos por tipo, para los contadores de las pestañas. */
+    conteoPorTipo: Record<string, number>;
     medidas: { id: number; nombre_medida: string }[];
-    bodegas: { id: number; nombre_bodega: string }[];
     categorias: CategoriaOpcion[];
 };
+
+/** Pestañas del listado: una por tipo de producto, más "Todos". */
+const PESTANAS_TIPO = [
+    { valor: '', etiqueta: 'Todos' },
+    ...CATEGORIAS_PRODUCTO.map((tipo) => ({
+        valor: String(tipo.valor),
+        etiqueta: tipo.etiqueta,
+    })),
+];
 
 const moneda = new Intl.NumberFormat('es-CO', {
     style: 'currency',
@@ -37,8 +48,8 @@ const moneda = new Intl.NumberFormat('es-CO', {
 export default function ProductosIndex({
     productos,
     filtros,
+    conteoPorTipo,
     medidas,
-    bodegas,
     categorias,
 }: Props) {
     const can = useCan();
@@ -48,20 +59,12 @@ export default function ProductosIndex({
         id: m.id,
         nombre: m.nombre_medida,
     }));
-    const opcionesBodega = bodegas.map((b) => ({
-        id: b.id,
-        nombre: b.nombre_bodega,
-    }));
 
-    // Un producto exige medida, bodega, categoría y subcategoría: se avisa qué falta crear.
+    // Un producto exige medida, categoría y subcategoría: se avisa qué falta crear.
     const faltantes = [
         medidas.length === 0 && {
             etiqueta: 'una medida',
             href: medidasIndex(),
-        },
-        bodegas.length === 0 && {
-            etiqueta: 'una bodega',
-            href: bodegasIndex(),
         },
         categorias.every((c) => c.sub_categorias.length === 0) && {
             etiqueta: 'una categoría con subcategorías',
@@ -91,8 +94,8 @@ export default function ProductosIndex({
                                     <ProductoFields
                                         errors={errors}
                                         medidas={opcionesMedida}
-                                        bodegas={opcionesBodega}
                                         categorias={categorias}
+                                        tipoInicial={filtros.tipo ?? undefined}
                                     />
                                 )}
                             </FormDialog>
@@ -118,8 +121,29 @@ export default function ProductosIndex({
                     </p>
                 )}
 
+                <FilterTabs
+                    url={index.url()}
+                    parametro="tipo"
+                    activa={filtros.tipo ?? ''}
+                    parametrosActuales={{
+                        buscar: filtros.buscar,
+                        eliminados: filtros.eliminados,
+                    }}
+                    pestanas={PESTANAS_TIPO.map((pestana) => ({
+                        ...pestana,
+                        cantidad:
+                            pestana.valor === ''
+                                ? Object.values(conteoPorTipo).reduce(
+                                      (suma, cantidad) => suma + cantidad,
+                                      0,
+                                  )
+                                : (conteoPorTipo[pestana.valor] ?? 0),
+                    }))}
+                />
+
                 <ListFilters
                     url={index.url()}
+                    parametrosExtra={filtros.tipo ? { tipo: filtros.tipo } : {}}
                     buscar={filtros.buscar}
                     placeholder="Buscar por código, nombre, marca o código de barras"
                     eliminados={{
@@ -242,7 +266,6 @@ export default function ProductosIndex({
                                                 producto={producto}
                                                 errors={errors}
                                                 medidas={opcionesMedida}
-                                                bodegas={opcionesBodega}
                                                 categorias={categorias}
                                             />
                                         )}

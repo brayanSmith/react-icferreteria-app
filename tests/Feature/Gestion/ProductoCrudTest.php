@@ -10,6 +10,7 @@ use App\Models\SubCategoria;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -32,6 +33,8 @@ class ProductoCrudTest extends TestCase
     }
 
     /**
+     * Datos del formulario. El código no se envía: lo genera el servidor.
+     *
      * @param  array<string, mixed>  $sobrescribir
      * @return array<string, mixed>
      */
@@ -39,12 +42,10 @@ class ProductoCrudTest extends TestCase
     {
         return [
             'categoria_producto' => 'PRODUCTO_TERMINADO',
-            'codigo_producto' => 'MAR-001',
             'nombre_producto' => 'Martillo de acero',
             'costo_producto' => '10000',
             'valor_detal_producto' => '15000',
             'medida_id' => $this->catalogos['medida']->id,
-            'bodega_id' => $this->catalogos['bodega']->id,
             'categoria_id' => $this->catalogos['categoria']->id,
             'sub_categoria_id' => $this->catalogos['subcategoria']->id,
             'activo' => '1',
@@ -52,7 +53,7 @@ class ProductoCrudTest extends TestCase
         ];
     }
 
-    public function test_crea_un_producto_con_numero_consecutivo_y_texto_concatenado(): void
+    public function test_crea_un_producto_con_numero_consecutivo_y_codigo_automatico(): void
     {
         $this->post(route('gestion.productos.store'), $this->datos())
             ->assertRedirect(route('gestion.productos.index'));
@@ -61,8 +62,94 @@ class ProductoCrudTest extends TestCase
 
         $this->assertSame($this->tenant->id, $producto->tenant_id);
         $this->assertSame(1, $producto->numero);
-        $this->assertSame('MAR-001 - Martillo de acero', $producto->concatenar_codigo_nombre);
+        $this->assertSame('PT-001', $producto->codigo_producto);
+        $this->assertSame('PT-001 - Martillo de acero', $producto->concatenar_codigo_nombre);
         $this->assertEquals(1, $producto->activo);
+    }
+
+    public function test_cada_tipo_de_producto_lleva_su_propio_prefijo_y_consecutivo(): void
+    {
+        $tipos = [
+            ['MATERIA_PRIMA', 'MP-001'],
+            ['MATERIA_PRIMA', 'MP-002'],
+            ['PRODUCTO_TERMINADO', 'PT-001'],
+            ['MATERIA_PRIMA', 'MP-003'],
+            ['PRODUCTO_TERMINADO', 'PT-002'],
+            ['OTRO', 'OT-001'],
+            ['DESCUENTO', 'DS-001'],
+            ['GASTOS', 'GS-001'],
+        ];
+
+        foreach ($tipos as [$tipo, $codigoEsperado]) {
+            $this->post(route('gestion.productos.store'), $this->datos(['categoria_producto' => $tipo]))
+                ->assertSessionHasNoErrors();
+
+            $this->assertSame($codigoEsperado, Producto::latest('id')->firstOrFail()->codigo_producto);
+        }
+    }
+
+    public function test_cada_tenant_lleva_su_propio_consecutivo_de_codigos(): void
+    {
+        $this->post(route('gestion.productos.store'), $this->datos(['categoria_producto' => 'MATERIA_PRIMA']));
+        $this->post(route('gestion.productos.store'), $this->datos(['categoria_producto' => 'MATERIA_PRIMA']));
+
+        $otroTenant = Tenant::factory()->create();
+        $ajenos = $this->catalogosBasicosDe($otroTenant);
+        $this->actingAs($this->administradorDe($otroTenant));
+
+        $this->post(route('gestion.productos.store'), [
+            ...$this->datos(['categoria_producto' => 'MATERIA_PRIMA']),
+            'medida_id' => $ajenos['medida']->id,
+            'categoria_id' => $ajenos['categoria']->id,
+            'sub_categoria_id' => $ajenos['subcategoria']->id,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('productos', ['tenant_id' => $otroTenant->id, 'codigo_producto' => 'MP-001']);
+        $this->assertDatabaseHas('productos', ['tenant_id' => $this->tenant->id, 'codigo_producto' => 'MP-002']);
+    }
+
+    public function test_ignora_un_codigo_enviado_por_el_usuario(): void
+    {
+        $this->post(route('gestion.productos.store'), $this->datos(['codigo_producto' => 'HACK-1']));
+
+        $this->assertSame('PT-001', Producto::firstOrFail()->codigo_producto);
+    }
+
+    public function test_salta_los_codigos_que_ya_estan_ocupados(): void
+    {
+        // Uno escrito a mano antes de que el código fuera automático y otro eliminado.
+        $this->crearProductoEn($this->tenant, $this->catalogos, ['codigo_producto' => 'PT-001']);
+        $this->crearProductoEn($this->tenant, $this->catalogos, ['codigo_producto' => 'PT-002'])->delete();
+
+        $this->post(route('gestion.productos.store'), $this->datos())->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('productos', ['codigo_producto' => 'PT-003']);
+    }
+
+    public function test_un_envio_invalido_no_consume_el_consecutivo(): void
+    {
+        $this->post(route('gestion.productos.store'), $this->datos(['nombre_producto' => '']))
+            ->assertSessionHasErrors('nombre_producto');
+        $this->post(route('gestion.productos.store'), $this->datos())->assertSessionHasNoErrors();
+
+        $this->assertSame('PT-001', Producto::firstOrFail()->codigo_producto);
+    }
+
+    public function test_el_codigo_no_cambia_al_editar_aunque_cambie_el_tipo_o_el_nombre(): void
+    {
+        $this->post(route('gestion.productos.store'), $this->datos(['categoria_producto' => 'MATERIA_PRIMA']));
+        $producto = Producto::firstOrFail();
+
+        $this->put(route('gestion.productos.update', $producto), $this->datos([
+            'categoria_producto' => 'PRODUCTO_TERMINADO',
+            'nombre_producto' => 'Martillo grande',
+            'codigo_producto' => 'OTRO-9',
+        ]))->assertSessionHasNoErrors();
+
+        $producto->refresh();
+        $this->assertSame('MP-001', $producto->codigo_producto);
+        $this->assertSame('PRODUCTO_TERMINADO', $producto->categoria_producto);
+        $this->assertSame('MP-001 - Martillo grande', $producto->concatenar_codigo_nombre);
     }
 
     public function test_los_campos_numericos_vacios_se_guardan_como_cero(): void
@@ -74,7 +161,7 @@ class ProductoCrudTest extends TestCase
         ]))->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('productos', [
-            'codigo_producto' => 'MAR-001',
+            'codigo_producto' => 'PT-001',
             'costo_producto' => 0,
             'valor_detal_producto' => 0,
             'alerta_producto' => 0,
@@ -99,30 +186,11 @@ class ProductoCrudTest extends TestCase
 
         $this->post(route('gestion.productos.store'), $this->datos([
             'medida_id' => $ajeno['medida']->id,
-            'bodega_id' => $ajeno['bodega']->id,
             'categoria_id' => $ajeno['categoria']->id,
             'sub_categoria_id' => $ajeno['subcategoria']->id,
-        ]))->assertSessionHasErrors(['medida_id', 'bodega_id', 'categoria_id']);
+        ]))->assertSessionHasErrors(['medida_id', 'categoria_id']);
 
         $this->assertDatabaseCount('productos', 0);
-    }
-
-    public function test_no_acepta_una_bodega_eliminada(): void
-    {
-        $this->catalogos['bodega']->delete();
-
-        $this->post(route('gestion.productos.store'), $this->datos())->assertSessionHasErrors('bodega_id');
-    }
-
-    public function test_el_codigo_es_unico_en_el_tenant_pero_repetible_en_otro(): void
-    {
-        $this->crearProductoEn($this->tenant, $this->catalogos, ['codigo_producto' => 'MAR-001']);
-
-        $this->post(route('gestion.productos.store'), $this->datos())->assertSessionHasErrors('codigo_producto');
-
-        $otroTenant = Tenant::factory()->create();
-        $this->crearProductoEn($otroTenant, $this->catalogosBasicosDe($otroTenant), ['codigo_producto' => 'MAR-001']);
-        $this->assertDatabaseCount('productos', 2);
     }
 
     public function test_valida_los_valores_permitidos_y_los_precios(): void
@@ -131,34 +199,29 @@ class ProductoCrudTest extends TestCase
             'categoria_producto' => 'MAGIA',
             'volumen_producto' => 'ENORME',
             'tipo_compra' => 'CONTRABANDO',
-            'tipo_producto' => 'CONTRABANDO',
             'valor_detal_producto' => '-5',
             'iva_producto' => '150',
-        ]))->assertSessionHasErrors(['categoria_producto', 'volumen_producto', 'tipo_compra', 'tipo_producto', 'valor_detal_producto', 'iva_producto']);
+        ]))->assertSessionHasErrors(['categoria_producto', 'volumen_producto', 'tipo_compra', 'valor_detal_producto', 'iva_producto']);
     }
 
-    public function test_el_tipo_del_producto_es_nacional_o_importado(): void
+    public function test_el_tipo_es_texto_libre_y_el_tipo_de_compra_es_nacional_o_importado(): void
     {
-        $this->post(route('gestion.productos.store'), $this->datos(['codigo_producto' => 'N-1', 'tipo_producto' => 'NACIONAL']))
-            ->assertSessionHasNoErrors();
-        $this->post(route('gestion.productos.store'), $this->datos(['codigo_producto' => 'I-1', 'tipo_producto' => 'IMPORTADO']))
-            ->assertSessionHasNoErrors();
-        $this->post(route('gestion.productos.store'), $this->datos(['codigo_producto' => 'S-1', 'tipo_producto' => '']))
+        $this->post(route('gestion.productos.store'), $this->datos(['tipo_producto' => 'Ferretería pesada', 'tipo_compra' => 'IMPORTADO']))
             ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseHas('productos', ['codigo_producto' => 'N-1', 'tipo_producto' => 'NACIONAL']);
-        $this->assertDatabaseHas('productos', ['codigo_producto' => 'I-1', 'tipo_producto' => 'IMPORTADO']);
-        $this->assertDatabaseHas('productos', ['codigo_producto' => 'S-1', 'tipo_producto' => null]);
+        $this->assertDatabaseHas('productos', ['tipo_producto' => 'Ferretería pesada', 'tipo_compra' => 'IMPORTADO']);
+
+        $this->post(route('gestion.productos.store'), $this->datos(['tipo_compra' => 'NACIONAL']))->assertSessionHasNoErrors();
+        $this->post(route('gestion.productos.store'), $this->datos(['tipo_compra' => '']))->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('productos', ['tipo_compra' => 'NACIONAL']);
     }
 
-    public function test_actualiza_un_producto_y_recalcula_el_texto_concatenado(): void
+    public function test_el_producto_ya_no_se_asocia_a_una_bodega(): void
     {
-        $producto = $this->crearProductoEn($this->tenant, $this->catalogos);
-
-        $this->put(route('gestion.productos.update', $producto), $this->datos(['codigo_producto' => 'P-001', 'nombre_producto' => 'Martillo grande']))
+        $this->post(route('gestion.productos.store'), $this->datos(['bodega_id' => $this->catalogos['bodega']->id]))
             ->assertSessionHasNoErrors();
 
-        $this->assertSame('P-001 - Martillo grande', $producto->refresh()->concatenar_codigo_nombre);
+        $this->assertFalse(Schema::hasColumn('productos', 'bodega_id'));
     }
 
     public function test_guarda_reemplaza_y_quita_la_imagen(): void
@@ -197,7 +260,7 @@ class ProductoCrudTest extends TestCase
                 ->where('productos.data.0.categoria', 'Herramientas')
                 ->where('productos.data.0.sub_categoria', 'Manuales')
                 ->has('medidas', 1)
-                ->has('bodegas', 1)
+                ->missing('bodegas')
                 ->where('categorias.0.nombre_categoria', 'Herramientas')
                 ->where('categorias.0.sub_categorias.0.nombre_sub_categoria', 'Manuales'));
     }
@@ -215,15 +278,30 @@ class ProductoCrudTest extends TestCase
             ->assertInertia(fn ($page) => $page->has('productos.data', 1)->where('productos.data.0.codigo_producto', 'C'));
     }
 
+    public function test_el_listado_filtra_por_pestana_de_tipo_y_cuenta_cada_una(): void
+    {
+        $this->crearProductoEn($this->tenant, $this->catalogos, ['codigo_producto' => 'MP-001', 'categoria_producto' => Producto::MATERIA_PRIMA]);
+        $this->crearProductoEn($this->tenant, $this->catalogos, ['codigo_producto' => 'MP-002', 'categoria_producto' => Producto::MATERIA_PRIMA]);
+        $this->crearProductoEn($this->tenant, $this->catalogos, ['codigo_producto' => 'PT-001', 'categoria_producto' => 'PRODUCTO_TERMINADO']);
+
+        $this->get(route('gestion.productos.index', ['tipo' => Producto::MATERIA_PRIMA]))
+            ->assertInertia(fn ($page) => $page
+                ->has('productos.data', 2)
+                ->where('filtros.tipo', Producto::MATERIA_PRIMA)
+                ->where('conteoPorTipo.'.Producto::MATERIA_PRIMA, 2)
+                ->where('conteoPorTipo.PRODUCTO_TERMINADO', 1));
+
+        // Un tipo desconocido equivale a "todos".
+        $this->get(route('gestion.productos.index', ['tipo' => 'INVENTADO']))
+            ->assertInertia(fn ($page) => $page->has('productos.data', 3)->where('filtros.tipo', null));
+    }
+
     public function test_elimina_de_forma_logica_y_restaura(): void
     {
         $producto = $this->crearProductoEn($this->tenant, $this->catalogos);
 
         $this->delete(route('gestion.productos.destroy', $producto))->assertRedirect(route('gestion.productos.index'));
         $this->assertSoftDeleted($producto);
-
-        $this->post(route('gestion.productos.store'), $this->datos(['codigo_producto' => 'P-001']))->assertSessionHasErrors('codigo_producto');
-        $this->assertStringContainsString('restáuralo', session('errors')->first('codigo_producto'));
 
         $this->post(route('gestion.productos.restore', $producto))->assertRedirect(route('gestion.productos.index'));
         $this->assertNotSoftDeleted($producto);

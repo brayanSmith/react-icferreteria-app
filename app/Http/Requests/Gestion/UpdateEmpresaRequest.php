@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Gestion;
 
+use App\Models\Empresa;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -19,6 +20,11 @@ class UpdateEmpresaRequest extends FormRequest
             'mostrar_productos_sin_inventario' => $this->boolean('mostrar_productos_sin_inventario'),
             'quitar_logo' => $this->boolean('quitar_logo'),
             'quitar_icono' => $this->boolean('quitar_icono'),
+            ...collect(Empresa::CAMPOS_COLOR)
+                ->mapWithKeys(fn (string $campo): array => [
+                    $campo => $this->filled($campo) ? strtolower((string) $this->input($campo)) : null,
+                ])
+                ->all(),
         ]);
     }
 
@@ -34,6 +40,10 @@ class UpdateEmpresaRequest extends FormRequest
             'telefono_empresa' => ['nullable', 'string', 'max:50'],
             'direccion_empresa' => ['nullable', 'string', 'max:255'],
             'mostrar_productos_sin_inventario' => ['boolean'],
+            'color_primario' => ['nullable', 'regex:/^#[0-9a-f]{6}$/'],
+            'color_primario_oscuro' => ['nullable', 'regex:/^#[0-9a-f]{6}$/'],
+            'color_menu' => ['nullable', 'regex:/^#[0-9a-f]{6}$/'],
+            'color_menu_oscuro' => ['nullable', 'regex:/^#[0-9a-f]{6}$/'],
 
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:2048'],
             'icono' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp,svg,ico', 'max:1024'],

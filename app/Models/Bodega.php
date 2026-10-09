@@ -16,11 +16,6 @@ class Bodega extends Model
     //
     protected $fillable = ['nombre_bodega', 'ubicacion_bodega'];
 
-    public function productos()
-    {
-        return $this->hasMany(Producto::class);
-    }
-
     public function pedidos()
     {
         return $this->hasMany(Pedido::class);

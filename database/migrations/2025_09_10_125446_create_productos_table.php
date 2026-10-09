@@ -64,7 +64,6 @@ return new class extends Migration
             $table->decimal('valor_especial_producto', 10, 2)->default(0);
             $table->string('imagen_producto')->nullable();
             $table->foreignId('medida_id')->constrained('medidas')->onDelete('cascade')->nullable();
-            $table->foreignId('bodega_id')->constrained('bodegas')->onDelete('cascade')->nullable();
             $table->foreignId('categoria_id')->constrained('categorias')->onDelete('cascade')->nullable();
             $table->foreignId('sub_categoria_id')->constrained('sub_categorias')->onDelete('cascade')->nullable();
             $table->integer('entradas')->default(0)->nullable();

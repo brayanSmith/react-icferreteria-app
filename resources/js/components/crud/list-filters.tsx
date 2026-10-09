@@ -13,6 +13,8 @@ type ListFiltersProps = {
     buscar?: string;
     placeholder?: string;
     /** Si se indica, muestra el casillero para ver solo los registros eliminados. */
+    /** Otros parámetros del listado (por ejemplo la pestaña activa) que se conservan al buscar. */
+    parametrosExtra?: Record<string, string>;
     eliminados?: {
         /** Nombre del parámetro en la URL (`eliminados` o `eliminadas`). */
         parametro: string;
@@ -30,6 +32,7 @@ export default function ListFilters({
     url,
     buscar,
     placeholder,
+    parametrosExtra = {},
     eliminados,
 }: ListFiltersProps) {
     const [texto, setTexto] = useState(buscar ?? '');
@@ -39,7 +42,9 @@ export default function ListFilters({
     );
 
     function aplicar(nuevoTexto: string, nuevoEliminados: boolean) {
-        const parametros: Record<string, string | number> = {};
+        const parametros: Record<string, string | number> = {
+            ...parametrosExtra,
+        };
 
         if (nuevoTexto !== '') {
             parametros.buscar = nuevoTexto;

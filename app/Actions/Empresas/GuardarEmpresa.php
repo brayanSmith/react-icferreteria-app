@@ -31,6 +31,9 @@ class GuardarEmpresa
             'email_empresa' => $datos['email_empresa'] ?? null,
             'telefono_empresa' => $datos['telefono_empresa'] ?? null,
             'direccion_empresa' => $datos['direccion_empresa'] ?? null,
+            ...collect(Empresa::CAMPOS_COLOR)
+                ->mapWithKeys(fn (string $campo): array => [$campo => $datos[$campo] ?? null])
+                ->all(),
             'cuentas_bancarias' => array_values($datos['cuentas_bancarias'] ?? []),
             'mostrar_productos_sin_inventario' => $datos['mostrar_productos_sin_inventario'] ?? true,
         ]);

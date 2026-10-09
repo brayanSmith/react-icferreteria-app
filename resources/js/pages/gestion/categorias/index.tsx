@@ -3,12 +3,15 @@ import CategoriaController from '@/actions/App/Http/Controllers/Gestion/Categori
 import CategoriaCard, {
     CamposCategoria,
 } from '@/components/categorias/categoria-card';
+import ExportarMenu from '@/components/crud/exportar-menu';
 import FormDialog from '@/components/crud/form-dialog';
+import ImportarDialog from '@/components/crud/importar-dialog';
+import ImportacionesPanel from '@/components/crud/importaciones-panel';
 import PageHeader from '@/components/crud/page-header';
 import { Button } from '@/components/ui/button';
 import { useCan } from '@/hooks/use-can';
 import { index } from '@/routes/gestion/categorias';
-import type { Categoria } from '@/types';
+import type { Categoria, Importacion, ImportacionPendiente } from '@/types';
 
 /**
  * Categorías de productos y sus subcategorías, en un solo módulo: cada
@@ -16,8 +19,12 @@ import type { Categoria } from '@/types';
  */
 export default function CategoriasIndex({
     categorias,
+    importaciones,
+    importacionPendiente,
 }: {
     categorias: { data: Categoria[] };
+    importaciones: { data: Importacion[] };
+    importacionPendiente: ImportacionPendiente | null;
 }) {
     const can = useCan();
 
@@ -30,20 +37,42 @@ export default function CategoriasIndex({
                     titulo="Categorías"
                     descripcion="Organiza tus productos en categorías y subcategorías"
                     accion={
-                        can('categorias.crear') && (
-                            <FormDialog
-                                titulo="Nueva categoría"
-                                accion={CategoriaController.store.form()}
-                                etiquetaGuardar="Crear categoría"
-                                trigger={<Button>Nueva categoría</Button>}
-                            >
-                                {({ errors }) => (
-                                    <CamposCategoria errors={errors} />
-                                )}
-                            </FormDialog>
-                        )
+                        <div className="flex flex-wrap gap-2">
+                            <ExportarMenu modulo="categorias" />
+                            {can('categorias.crear') && (
+                                <>
+                                    <ImportarDialog
+                                        tipos={[
+                                            {
+                                                valor: 'categorias',
+                                                etiqueta: 'Categorías',
+                                            },
+                                            {
+                                                valor: 'subcategorias',
+                                                etiqueta: 'Subcategorías',
+                                            },
+                                        ]}
+                                        pendiente={importacionPendiente}
+                                    />
+                                    <FormDialog
+                                        titulo="Nueva categoría"
+                                        accion={CategoriaController.store.form()}
+                                        etiquetaGuardar="Crear categoría"
+                                        trigger={
+                                            <Button>Nueva categoría</Button>
+                                        }
+                                    >
+                                        {({ errors }) => (
+                                            <CamposCategoria errors={errors} />
+                                        )}
+                                    </FormDialog>
+                                </>
+                            )}
+                        </div>
                     }
                 />
+
+                <ImportacionesPanel importaciones={importaciones.data} />
 
                 {categorias.data.length === 0 ? (
                     <p className="rounded-lg border p-8 text-center text-sm text-muted-foreground">

@@ -132,6 +132,65 @@
     --sidebar-ring: oklch(0.439 0 0);
 }
 
+/*
+ * Colores de la empresa. El servidor define --marca (controles) y --menu (fondo
+ * del menú) con su variante -oscuro y el texto de cada uno (-foreground), y marca
+ * la raíz con data-marca / data-menu según lo que la empresa haya elegido. Sin
+ * variante oscura, los controles usan el color claro y el menú el predeterminado.
+ */
+:root[data-marca],
+:root.dark[data-marca]:not([data-marca-oscuro]) {
+    --primary: var(--marca);
+    --primary-foreground: var(--marca-foreground);
+    --ring: color-mix(in oklab, var(--marca) 45%, transparent);
+    --sidebar-primary: var(--marca);
+    --sidebar-primary-foreground: var(--marca-foreground);
+    --sidebar-accent: color-mix(in oklab, var(--marca) 14%, transparent);
+    --sidebar-ring: color-mix(in oklab, var(--marca) 45%, transparent);
+}
+
+:root.dark[data-marca-oscuro] {
+    --primary: var(--marca-oscuro);
+    --primary-foreground: var(--marca-oscuro-foreground);
+    --ring: color-mix(in oklab, var(--marca-oscuro) 45%, transparent);
+    --sidebar-primary: var(--marca-oscuro);
+    --sidebar-primary-foreground: var(--marca-oscuro-foreground);
+    --sidebar-accent: color-mix(in oklab, var(--marca-oscuro) 14%, transparent);
+    --sidebar-ring: color-mix(in oklab, var(--marca-oscuro) 45%, transparent);
+}
+
+:root:not(.dark)[data-menu] {
+    --sidebar: var(--menu);
+    --sidebar-foreground: var(--menu-foreground);
+    --sidebar-accent: color-mix(
+        in oklab,
+        var(--menu-foreground) 12%,
+        transparent
+    );
+    --sidebar-accent-foreground: var(--menu-foreground);
+    --sidebar-border: color-mix(
+        in oklab,
+        var(--menu-foreground) 15%,
+        transparent
+    );
+}
+
+:root.dark[data-menu-oscuro] {
+    --sidebar: var(--menu-oscuro);
+    --sidebar-foreground: var(--menu-oscuro-foreground);
+    --sidebar-accent: color-mix(
+        in oklab,
+        var(--menu-oscuro-foreground) 12%,
+        transparent
+    );
+    --sidebar-accent-foreground: var(--menu-oscuro-foreground);
+    --sidebar-border: color-mix(
+        in oklab,
+        var(--menu-oscuro-foreground) 15%,
+        transparent
+    );
+}
+
 @layer base {
     * {
         @apply border-border;

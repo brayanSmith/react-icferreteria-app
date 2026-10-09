@@ -71,7 +71,6 @@ class MedidaCrudTest extends TestCase
             'codigo_producto' => 'P1',
             'nombre_producto' => 'Martillo',
             'medida_id' => $catalogos['medida']->id,
-            'bodega_id' => $catalogos['bodega']->id,
             'categoria_id' => $catalogos['categoria']->id,
             'sub_categoria_id' => $catalogos['subcategoria']->id,
         ]);
@@ -90,7 +89,6 @@ class MedidaCrudTest extends TestCase
             'codigo_producto' => 'P1',
             'nombre_producto' => 'Martillo',
             'medida_id' => $catalogos['medida']->id,
-            'bodega_id' => $catalogos['bodega']->id,
             'categoria_id' => $catalogos['categoria']->id,
             'sub_categoria_id' => $catalogos['subcategoria']->id,
         ]);

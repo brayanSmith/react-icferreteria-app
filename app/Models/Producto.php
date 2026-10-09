@@ -4,12 +4,58 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\TieneNumeroConsecutivo;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Producto extends Model
 {
+    /**
+     * Valor de "categoria_producto" de los insumos con los que se arman otros
+     * productos. Solo estos pueden ser ingredientes de una fórmula.
+     */
+    public const MATERIA_PRIMA = 'MATERIA_PRIMA';
+
+    /**
+     * Prefijo del código automático según el tipo de producto: MP-001, PT-001...
+     *
+     * @var array<string, string>
+     */
+    public const PREFIJOS_CODIGO = [
+        'MATERIA_PRIMA' => 'MP',
+        'PRODUCTO_TERMINADO' => 'PT',
+        'OTRO' => 'OT',
+        'DESCUENTO' => 'DS',
+        'GASTOS' => 'GS',
+    ];
+
+    /**
+     * Siguiente código libre del tenant para ese tipo de producto.
+     *
+     * Cada tipo lleva su propio consecutivo dentro del tenant (MP-001, MP-002...
+     * y, aparte, PT-001...). Si un código ya está en uso (por ejemplo, porque se
+     * escribió a mano antes de que fuera automático, o lo tiene un producto
+     * eliminado), se salta al siguiente.
+     *
+     * Debe llamarse dentro de una transacción junto con la creación del producto:
+     * así, si el guardado falla, el número se devuelve y no quedan huecos.
+     */
+    public static function siguienteCodigo(int $tenantId, string $tipo): string
+    {
+        $prefijo = self::PREFIJOS_CODIGO[$tipo] ?? 'PR';
+
+        do {
+            $numero = Consecutivo::siguiente($tenantId, "codigo_producto.{$prefijo}");
+            $codigo = sprintf('%s-%03d', $prefijo, $numero);
+        } while (self::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('codigo_producto', $codigo)
+            ->exists());
+
+        return $codigo;
+    }
+
     use BelongsToTenant;
 
     //
@@ -30,7 +76,6 @@ class Producto extends Model
         'valor_ferretero_producto',
         'valor_especial_producto',
         'imagen_producto',
-        'bodega_id',
         'entradas',
         'salidas',
         'activo',
@@ -58,6 +103,16 @@ class Producto extends Model
         return $this->hasMany(DetalleCompra::class);
     }*/
 
+    /**
+     * Limita la consulta a los productos de tipo materia prima.
+     *
+     * @param  Builder<Producto>  $query
+     */
+    public function scopeMateriaPrima(Builder $query): void
+    {
+        $query->where('categoria_producto', self::MATERIA_PRIMA);
+    }
+
     public function detallePedidos()
     {
         return $this->hasMany(DetallePedido::class);
@@ -71,11 +126,6 @@ class Producto extends Model
     public function medida()
     {
         return $this->belongsTo(Medida::class, 'medida_id');
-    }
-
-    public function bodega()
-    {
-        return $this->belongsTo(Bodega::class, 'bodega_id');
     }
 
     public function categoria()

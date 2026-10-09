@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Gestion;
 
+use App\Actions\Importaciones\PanelDeImportacion;
 use App\Enums\Modulo;
 use App\Http\Controllers\Concerns\EsCrudDeGestion;
 use App\Http\Controllers\Controller;
@@ -44,6 +45,7 @@ class CategoriaController extends Controller implements HasMiddleware
 
         return Inertia::render('gestion/categorias/index', [
             'categorias' => CategoriaResource::collection($categorias),
+            ...PanelDeImportacion::props(['categorias', 'subcategorias']),
         ]);
     }
 

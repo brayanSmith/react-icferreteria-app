@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Empresa } from '@/types';
 import BankAccountsField from './bank-accounts-field';
+import ColorField from './color-field';
 import ImageField from '@/components/image-field';
 import type { AspectoRecorte } from '@/components/image-crop-dialog';
 
@@ -156,6 +157,44 @@ export default function EmpresaForm({
                                 error={errors.icono}
                                 aspectos={ASPECTOS_ICONO}
                                 maxLado={512}
+                            />
+                        </div>
+                    </section>
+
+                    <section className="space-y-6">
+                        <Heading
+                            variant="small"
+                            title="Identidad"
+                            description="Dale a la aplicación los colores de tu empresa"
+                        />
+                        <div className="grid gap-6 sm:grid-cols-2">
+                            <ColorField
+                                name="color_primario"
+                                etiqueta="Color de controles"
+                                ayuda="Botones, enlaces activos y foco de los campos."
+                                inicial={empresa?.color_primario ?? null}
+                                error={errors.color_primario}
+                            />
+                            <ColorField
+                                name="color_menu"
+                                etiqueta="Color del menú"
+                                ayuda="Fondo del menú lateral."
+                                inicial={empresa?.color_menu ?? null}
+                                error={errors.color_menu}
+                            />
+                            <ColorField
+                                name="color_primario_oscuro"
+                                etiqueta="Color de controles (modo oscuro)"
+                                ayuda="Si no lo defines, usa el color de controles."
+                                inicial={empresa?.color_primario_oscuro ?? null}
+                                error={errors.color_primario_oscuro}
+                            />
+                            <ColorField
+                                name="color_menu_oscuro"
+                                etiqueta="Color del menú (modo oscuro)"
+                                ayuda="Si no lo defines, el menú queda oscuro por defecto."
+                                inicial={empresa?.color_menu_oscuro ?? null}
+                                error={errors.color_menu_oscuro}
                             />
                         </div>
                     </section>

@@ -54,7 +54,7 @@ class HandleInertiaRequests extends Middleware
      * menú, el título y el favicon. Es null si el usuario no tiene tenant (el
      * super administrador) o su tenant aún no registró la empresa.
      *
-     * @return array{nombre: string, logo_url: ?string, icono_url: ?string}|null
+     * @return array{nombre: string, logo_url: ?string, icono_url: ?string, colores: array<string, string>}|null
      */
     private function marcaDeEmpresa(?User $usuario): ?array
     {
@@ -68,6 +68,7 @@ class HandleInertiaRequests extends Middleware
             'nombre' => $empresa->nombre_empresa,
             'logo_url' => $empresa->logoUrl(),
             'icono_url' => $empresa->iconoUrl(),
+            'colores' => $empresa->variablesDeColor(),
         ];
     }
 

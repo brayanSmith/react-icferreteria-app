@@ -41,6 +41,24 @@
             <link rel="apple-touch-icon" href="/apple-touch-icon.png">
         @endif
 
+        {{-- Colores de la empresa: se aplican desde el servidor para que no parpadeen al cargar --}}
+        @if (! empty($marca['colores']))
+            <style>
+                :root {
+                    @foreach ($marca['colores'] as $variable => $valor)
+                        {{ $variable }}: {{ $valor }};
+                    @endforeach
+                }
+            </style>
+            <script>
+                @foreach (['marca', 'marca-oscuro', 'menu', 'menu-oscuro'] as $atributo)
+                    @if (isset($marca['colores']["--{$atributo}"]))
+                        document.documentElement.setAttribute('data-{{ $atributo }}', '');
+                    @endif
+                @endforeach
+            </script>
+        @endif
+
         @fonts
 
         @viteReactRefresh

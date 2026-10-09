@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import {
     CATEGORIAS_PRODUCTO,
-    TIPOS_PRODUCTO,
+    TIPOS_COMPRA,
     VOLUMENES_PRODUCTO,
 } from '@/lib/catalogos';
 import type { CategoriaOpcion, OpcionSelect, Producto } from '@/types';
@@ -34,8 +34,9 @@ type ProductoFieldsProps = {
     producto?: Producto;
     errors: Record<string, string>;
     medidas: OpcionSelect[];
-    bodegas: OpcionSelect[];
     categorias: CategoriaOpcion[];
+    /** Tipo de producto con el que arranca un producto nuevo (por ejemplo, el de la pestaña activa). */
+    tipoInicial?: string;
 };
 
 /**
@@ -47,8 +48,8 @@ export default function ProductoFields({
     producto,
     errors,
     medidas,
-    bodegas,
     categorias,
+    tipoInicial,
 }: ProductoFieldsProps) {
     const [categoriaId, setCategoriaId] = useState(
         String(producto?.categoria_id ?? ''),
@@ -84,20 +85,24 @@ export default function ProductoFields({
                     name="categoria_producto"
                     etiqueta="Tipo de producto"
                     defaultValue={
-                        producto?.categoria_producto ?? 'PRODUCTO_TERMINADO'
+                        producto?.categoria_producto ??
+                        tipoInicial ??
+                        'PRODUCTO_TERMINADO'
                     }
                     opciones={CATEGORIAS_PRODUCTO}
                     columnas={3}
                     error={errors.categoria_producto}
                 />
                 <div className="grid gap-4 sm:grid-cols-2">
-                    <TextField
-                        name="codigo_producto"
-                        etiqueta="Código"
-                        defaultValue={producto?.codigo_producto}
-                        required
-                        error={errors.codigo_producto}
-                    />
+                    {/* El código lo genera el servidor según el tipo (MP-001, PT-001...) y no se edita. */}
+                    <div className="grid gap-2">
+                        <Label>Código</Label>
+                        <div className="flex h-9 items-center rounded-md border bg-muted/40 px-3 font-mono text-sm text-muted-foreground">
+                            {producto
+                                ? producto.codigo_producto
+                                : 'Se genera automáticamente'}
+                        </div>
+                    </div>
                     <TextField
                         name="nombre_producto"
                         etiqueta="Nombre"
@@ -169,17 +174,6 @@ export default function ProductoFields({
                         }))}
                         placeholder="Selecciona una medida"
                         error={errors.medida_id}
-                    />
-                    <SelectField
-                        name="bodega_id"
-                        etiqueta="Bodega"
-                        defaultValue={producto?.bodega_id ?? ''}
-                        opciones={bodegas.map((b) => ({
-                            valor: b.id,
-                            etiqueta: b.nombre,
-                        }))}
-                        placeholder="Selecciona una bodega"
-                        error={errors.bodega_id}
                     />
                 </div>
             </Seccion>
@@ -295,12 +289,10 @@ export default function ProductoFields({
                 </summary>
                 <div className="mt-4 space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <SelectField
+                        <TextField
                             name="tipo_producto"
                             etiqueta="Tipo"
                             defaultValue={producto?.tipo_producto ?? ''}
-                            opciones={TIPOS_PRODUCTO}
-                            placeholder="Sin definir"
                             error={errors.tipo_producto}
                         />
                         <TextField
@@ -319,6 +311,14 @@ export default function ProductoFields({
                             opciones={VOLUMENES_PRODUCTO}
                             placeholder="Sin definir"
                             error={errors.volumen_producto}
+                        />
+                        <SelectField
+                            name="tipo_compra"
+                            etiqueta="Tipo de compra"
+                            defaultValue={producto?.tipo_compra ?? ''}
+                            opciones={TIPOS_COMPRA}
+                            placeholder="Sin definir"
+                            error={errors.tipo_compra}
                         />
                         <TextField
                             name="empaquetado_externo"

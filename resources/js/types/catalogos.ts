@@ -89,11 +89,9 @@ export type Producto = {
     valor_especial_producto: number;
     iva_producto: number | null;
     medida_id: number;
-    bodega_id: number;
     categoria_id: number;
     sub_categoria_id: number;
     medida?: string;
-    bodega?: string;
     categoria?: string;
     sub_categoria?: string;
     stock: number;
@@ -128,4 +126,91 @@ export type StockInicial = {
     bodega?: string;
     cantidad: number;
     deleted_at: string | null;
+};
+
+export type Cliente = {
+    id: number;
+    numero: number;
+    tipo_documento: string;
+    numero_documento: string;
+    razon_social: string;
+    representante_legal: string | null;
+    email: string | null;
+    telefono: string | null;
+    ciudad: string | null;
+    direccion: string | null;
+    ruta_id: number | null;
+    comercial_id: number | null;
+    ruta?: string | null;
+    comercial?: string | null;
+    categoria: string | null;
+    sector: string | null;
+    tipo_cliente: 'ELECTRONICO' | 'REMISIONADO';
+    retenedor_fuente: 'SI' | 'NO';
+    limite_credito: number;
+    saldo_cartera: number;
+    activo: boolean;
+    novedad: string | null;
+    rut_url: string | null;
+    deleted_at: string | null;
+};
+
+/** Un ingrediente de una fórmula: un producto y su cantidad. */
+export type DetalleFormula = {
+    producto_id: number;
+    producto: string;
+    medida: string | null;
+    cantidad_producto: number;
+};
+
+export type Formula = {
+    id: number;
+    nombre_formula: string;
+    descripcion_formula: string | null;
+    detalles: DetalleFormula[];
+};
+
+/** Producto disponible como ingrediente, con la medida en la que se cuenta. */
+export type ProductoIngrediente = {
+    id: number;
+    nombre: string;
+    medida: string | null;
+};
+
+/** Seguimiento de un archivo CSV importado en segundo plano. */
+export type Importacion = {
+    id: number;
+    /** Qué se importó (por ejemplo, "Subcategorías"). */
+    tipo: string | null;
+    nombre_original: string;
+    estado: 'pendiente' | 'procesando' | 'completada' | 'fallida';
+    modo: 'crear' | 'actualizar';
+    delimitador: string | null;
+    total_filas: number;
+    filas_procesadas: number;
+    filas_creadas: number;
+    filas_actualizadas: number;
+    filas_omitidas: number;
+    filas_con_error: number;
+    errores: { fila: number; mensaje: string }[];
+    mensaje: string | null;
+    creada: string | null;
+};
+
+/** Archivo ya subido que espera que se relacionen sus columnas con las del sistema. */
+export type ImportacionPendiente = {
+    id: number;
+    etiqueta: string;
+    nombre_original: string;
+    delimitador: string | null;
+    encabezados: string[];
+    muestra: (string | null)[][];
+    /** Columna del sistema => posición sugerida en el archivo (null si no hay). */
+    sugerencia: Record<string, number | null>;
+    columnas: {
+        clave: string;
+        etiqueta: string;
+        requerida_crear: boolean;
+        requerida_actualizar: boolean;
+    }[];
 };
