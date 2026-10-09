@@ -22,6 +22,12 @@ enum Modulo: string
     case Usuarios = 'usuarios';
     case Roles = 'roles';
     case Empresa = 'empresa';
+    case Pucs = 'pucs';
+    case Medidas = 'medidas';
+    case Categorias = 'categorias';
+    case Bodegas = 'bodegas';
+    case Rutas = 'rutas';
+    case StockInicial = 'stock_inicial';
 
     public function etiqueta(): string
     {
@@ -37,6 +43,12 @@ enum Modulo: string
             self::Usuarios => 'Usuarios',
             self::Roles => 'Roles',
             self::Empresa => 'Empresa',
+            self::Pucs => 'Plan de cuentas (PUC)',
+            self::Medidas => 'Medidas',
+            self::Categorias => 'Categorías y subcategorías',
+            self::Bodegas => 'Bodegas',
+            self::Rutas => 'Rutas',
+            self::StockInicial => 'Stock inicial',
         };
     }
 

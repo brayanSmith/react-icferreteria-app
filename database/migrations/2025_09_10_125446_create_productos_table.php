@@ -67,7 +67,6 @@ return new class extends Migration
             $table->foreignId('bodega_id')->constrained('bodegas')->onDelete('cascade')->nullable();
             $table->foreignId('categoria_id')->constrained('categorias')->onDelete('cascade')->nullable();
             $table->foreignId('sub_categoria_id')->constrained('sub_categorias')->onDelete('cascade')->nullable();
-            $table->integer('stock_inicial')->default(0)->nullable();
             $table->integer('entradas')->default(0)->nullable();
             $table->integer('salidas')->default(0)->nullable();
             $table->boolean('activo')->default(true)->nullable();

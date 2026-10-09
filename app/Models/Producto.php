@@ -31,7 +31,6 @@ class Producto extends Model
         'valor_especial_producto',
         'imagen_producto',
         'bodega_id',
-        'stock_inicial',
         'entradas',
         'salidas',
         'activo',
@@ -97,6 +96,11 @@ class Producto extends Model
     public function traslados()
     {
         return $this->hasMany(Traslado::class);
+    }
+
+    public function stockIniciales()
+    {
+        return $this->hasMany(StockInicial::class);
     }
 
     public function stockBodegas()

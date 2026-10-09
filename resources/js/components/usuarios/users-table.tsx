@@ -1,3 +1,4 @@
+import CrudTable from '@/components/crud/crud-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCan } from '@/hooks/use-can';
@@ -5,6 +6,10 @@ import type { RolOpcion, UsuarioTenant } from '@/types';
 import DeleteUserDialog from './delete-user-dialog';
 import UserDialog from './user-dialog';
 
+/**
+ * Personal del tenant. Llega completo desde el servidor, así que las columnas
+ * principales se pueden ordenar en el navegador.
+ */
 export default function UsersTable({
     usuarios,
     roles,
@@ -14,97 +19,82 @@ export default function UsersTable({
 }) {
     const can = useCan();
 
-    if (usuarios.length === 0) {
-        return (
-            <p className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
-                Todavía no hay usuarios. Crea el primero para darle acceso a tu
-                personal.
-            </p>
-        );
-    }
-
     return (
-        <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-left">
-                    <tr>
-                        <th className="px-4 py-3 font-medium">Nombre</th>
-                        <th className="px-4 py-3 font-medium">Correo</th>
-                        <th className="px-4 py-3 font-medium">Documento</th>
-                        <th className="px-4 py-3 font-medium">Roles</th>
-                        <th className="px-4 py-3 font-medium">Estado</th>
-                        <th className="px-4 py-3 text-right font-medium">
-                            Acciones
-                        </th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y">
-                    {usuarios.map((usuario) => (
-                        <tr key={usuario.id}>
-                            <td className="px-4 py-3 font-medium">
-                                {usuario.name}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                                {usuario.email}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                                {usuario.n_documento}
-                            </td>
-                            <td className="px-4 py-3">
-                                <div className="flex flex-wrap gap-1">
-                                    {usuario.roles.length === 0 ? (
-                                        <span className="text-muted-foreground">
-                                            Sin roles
-                                        </span>
-                                    ) : (
-                                        usuario.roles.map((rol) => (
-                                            <Badge
-                                                key={rol.id}
-                                                variant="secondary"
-                                            >
-                                                {rol.name}
-                                            </Badge>
-                                        ))
-                                    )}
-                                </div>
-                            </td>
-                            <td className="px-4 py-3">
-                                <div className="flex flex-wrap gap-1">
-                                    {usuario.activo ? (
-                                        <Badge>Activo</Badge>
-                                    ) : (
-                                        <Badge variant="outline">
-                                            Inactivo
-                                        </Badge>
-                                    )}
-                                    {usuario.debe_cambiar_password && (
-                                        <Badge variant="secondary">
-                                            Clave temporal
-                                        </Badge>
-                                    )}
-                                </div>
-                            </td>
-                            <td className="px-4 py-3">
-                                <div className="flex justify-end gap-2">
-                                    {can('usuarios.editar') && (
-                                        <UserDialog
-                                            roles={roles}
-                                            usuario={usuario}
-                                        >
-                                            <Button size="sm" variant="outline">
-                                                Editar
-                                            </Button>
-                                        </UserDialog>
-                                    )}
-                                    {can('usuarios.eliminar') && (
-                                        <DeleteUserDialog usuario={usuario} />
-                                    )}
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+        <CrudTable
+            filas={usuarios}
+            clave={(usuario) => usuario.id}
+            vacio="Todavía no hay usuarios. Crea el primero para darle acceso a tu personal."
+            columnas={[
+                {
+                    encabezado: 'Nombre',
+                    valorOrden: (u) => u.name,
+                    celda: (u) => <span className="font-medium">{u.name}</span>,
+                },
+                {
+                    encabezado: 'Correo',
+                    valorOrden: (u) => u.email,
+                    celda: (u) => (
+                        <span className="text-muted-foreground">{u.email}</span>
+                    ),
+                },
+                {
+                    encabezado: 'Documento',
+                    valorOrden: (u) => u.n_documento,
+                    celda: (u) => (
+                        <span className="text-muted-foreground">
+                            {u.n_documento}
+                        </span>
+                    ),
+                },
+                {
+                    encabezado: 'Roles',
+                    celda: (u) =>
+                        u.roles.length === 0 ? (
+                            <span className="text-muted-foreground">
+                                Sin roles
+                            </span>
+                        ) : (
+                            <div className="flex flex-wrap gap-1">
+                                {u.roles.map((rol) => (
+                                    <Badge key={rol.id} variant="secondary">
+                                        {rol.name}
+                                    </Badge>
+                                ))}
+                            </div>
+                        ),
+                },
+                {
+                    encabezado: 'Estado',
+                    celda: (u) => (
+                        <div className="flex flex-wrap gap-1">
+                            {u.activo ? (
+                                <Badge>Activo</Badge>
+                            ) : (
+                                <Badge variant="outline">Inactivo</Badge>
+                            )}
+                            {u.debe_cambiar_password && (
+                                <Badge variant="secondary">
+                                    Clave temporal
+                                </Badge>
+                            )}
+                        </div>
+                    ),
+                },
+            ]}
+            acciones={(usuario) => (
+                <>
+                    {can('usuarios.editar') && (
+                        <UserDialog roles={roles} usuario={usuario}>
+                            <Button size="sm" variant="outline">
+                                Editar
+                            </Button>
+                        </UserDialog>
+                    )}
+                    {can('usuarios.eliminar') && (
+                        <DeleteUserDialog usuario={usuario} />
+                    )}
+                </>
+            )}
+        />
     );
 }

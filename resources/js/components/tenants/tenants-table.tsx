@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import CrudTable from '@/components/crud/crud-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { store as restaurar } from '@/routes/admin/restored-tenants';
@@ -6,6 +7,7 @@ import { edit } from '@/routes/admin/tenants';
 import type { Tenant } from '@/types';
 import DeleteTenantDialog from './delete-tenant-dialog';
 
+/** Estado del tenant: eliminado, activo o inactivo. */
 function EstadoBadge({ tenant }: { tenant: Tenant }) {
     if (tenant.deleted_at) {
         return <Badge variant="destructive">Eliminado</Badge>;
@@ -18,82 +20,71 @@ function EstadoBadge({ tenant }: { tenant: Tenant }) {
     );
 }
 
-function Acciones({ tenant }: { tenant: Tenant }) {
-    if (tenant.deleted_at) {
-        return (
-            <Button asChild size="sm" variant="outline">
-                <Link href={restaurar(tenant.id)} as="button" preserveScroll>
-                    Restaurar
-                </Link>
-            </Button>
-        );
-    }
-
-    return (
-        <div className="flex justify-end gap-2">
-            <Button asChild size="sm" variant="outline">
-                <Link href={edit(tenant.id)}>Editar</Link>
-            </Button>
-            <DeleteTenantDialog tenant={tenant} />
-        </div>
-    );
-}
-
+/**
+ * Listado de tenants. La paginación y la búsqueda las hace el servidor, por eso
+ * las columnas no se ordenan en el navegador.
+ */
 export default function TenantsTable({ tenants }: { tenants: Tenant[] }) {
-    if (tenants.length === 0) {
-        return (
-            <p className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
-                No hay tenants que coincidan con la búsqueda.
-            </p>
-        );
-    }
-
     return (
-        <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-left">
-                    <tr>
-                        <th className="px-4 py-3 font-medium">Nombre</th>
-                        <th className="px-4 py-3 font-medium">Slug</th>
-                        <th className="px-4 py-3 font-medium">Estado</th>
-                        <th className="px-4 py-3 text-right font-medium">
-                            Usuarios
-                        </th>
-                        <th className="px-4 py-3 font-medium">Creado</th>
-                        <th className="px-4 py-3 text-right font-medium">
-                            Acciones
-                        </th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y">
-                    {tenants.map((tenant) => (
-                        <tr key={tenant.id}>
-                            <td className="px-4 py-3 font-medium">
-                                {tenant.nombre}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                                {tenant.slug}
-                            </td>
-                            <td className="px-4 py-3">
-                                <EstadoBadge tenant={tenant} />
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                                {tenant.users_count ?? 0}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                                {tenant.created_at
-                                    ? new Date(
-                                          tenant.created_at,
-                                      ).toLocaleDateString('es-CO')
-                                    : '—'}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                                <Acciones tenant={tenant} />
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+        <CrudTable
+            filas={tenants}
+            clave={(tenant) => tenant.id}
+            vacio="No hay tenants que coincidan con la búsqueda."
+            columnas={[
+                {
+                    encabezado: 'Nombre',
+                    celda: (t) => (
+                        <span className="font-medium">{t.nombre}</span>
+                    ),
+                },
+                {
+                    encabezado: 'Slug',
+                    celda: (t) => (
+                        <span className="text-muted-foreground">{t.slug}</span>
+                    ),
+                },
+                {
+                    encabezado: 'Estado',
+                    celda: (t) => <EstadoBadge tenant={t} />,
+                },
+                {
+                    encabezado: 'Usuarios',
+                    alinear: 'derecha',
+                    celda: (t) => t.users_count ?? 0,
+                },
+                {
+                    encabezado: 'Creado',
+                    celda: (t) => (
+                        <span className="text-muted-foreground">
+                            {t.created_at
+                                ? new Date(t.created_at).toLocaleDateString(
+                                      'es-CO',
+                                  )
+                                : '—'}
+                        </span>
+                    ),
+                },
+            ]}
+            acciones={(tenant) =>
+                tenant.deleted_at ? (
+                    <Button asChild size="sm" variant="outline">
+                        <Link
+                            href={restaurar(tenant.id)}
+                            as="button"
+                            preserveScroll
+                        >
+                            Restaurar
+                        </Link>
+                    </Button>
+                ) : (
+                    <>
+                        <Button asChild size="sm" variant="outline">
+                            <Link href={edit(tenant.id)}>Editar</Link>
+                        </Button>
+                        <DeleteTenantDialog tenant={tenant} />
+                    </>
+                )
+            }
+        />
     );
 }

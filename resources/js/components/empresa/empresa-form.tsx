@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Empresa } from '@/types';
 import BankAccountsField from './bank-accounts-field';
-import ImageField from './image-field';
-import type { AspectoRecorte } from './image-crop-dialog';
+import ImageField from '@/components/image-field';
+import type { AspectoRecorte } from '@/components/image-crop-dialog';
 
 // El logo admite varias proporciones; el ícono siempre es cuadrado.
 const ASPECTOS_LOGO: AspectoRecorte[] = [

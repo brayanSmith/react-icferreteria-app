@@ -26,14 +26,30 @@ class Bodega extends Model
         return $this->hasMany(Pedido::class);
     }
 
-    public function traslados()
+    /**
+     * Traslados en los que esta bodega entrega mercancía.
+     */
+    public function trasladosComoDonante()
     {
-        return $this->hasMany(Traslado::class);
+        return $this->hasMany(Traslado::class, 'bodega_donante_id');
+    }
+
+    /**
+     * Traslados en los que esta bodega recibe mercancía.
+     */
+    public function trasladosComoDestino()
+    {
+        return $this->hasMany(Traslado::class, 'bodega_destino_id');
     }
 
     public function compras()
     {
         return $this->hasMany(Compra::class);
+    }
+
+    public function stockIniciales()
+    {
+        return $this->hasMany(StockInicial::class);
     }
 
     public function stockBodegas()

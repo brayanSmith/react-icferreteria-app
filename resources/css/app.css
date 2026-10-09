@@ -140,4 +140,22 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    /*
+     * Los <select> nativos pintan su lista desplegable con el esquema de
+     * colores del navegador (blanco por defecto). Se le indica el esquema del
+     * tema y se fijan los colores de las opciones para que sigan claro/oscuro.
+     */
+    select {
+        color-scheme: light;
+    }
+
+    .dark select {
+        color-scheme: dark;
+    }
+
+    select option {
+        background-color: var(--popover);
+        color: var(--popover-foreground);
+    }
 }

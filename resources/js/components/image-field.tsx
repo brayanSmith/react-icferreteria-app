@@ -6,8 +6,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { esImagenEditable } from '@/lib/image-editing';
-import ImageCropDialog from './image-crop-dialog';
-import type { AspectoRecorte } from './image-crop-dialog';
+import ImageCropDialog from '@/components/image-crop-dialog';
+import type { AspectoRecorte } from '@/components/image-crop-dialog';
 
 type ImageFieldProps = {
     id: string;
