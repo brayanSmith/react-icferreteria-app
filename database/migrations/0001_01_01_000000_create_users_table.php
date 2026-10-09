@@ -25,6 +25,8 @@ return new class extends Migration
             $table->unique(['tenant_id', 'n_documento']);
             $table->boolean('activo')->default(true);
             $table->boolean('es_super_admin')->default(false);
+            $table->boolean('es_admin')->default(false);
+            $table->boolean('debe_cambiar_password')->default(false);
             $table->string('cod_vendedor')->nullable();
             $table->rememberToken();
             $table->timestamps();

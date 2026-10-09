@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\Modulo;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -27,6 +29,26 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
+     * Permisos efectivos del usuario, para mostrar u ocultar opciones en el
+     * frontend. Los administradores tienen todo el catálogo. La verificación
+     * real siempre se hace en el servidor.
+     *
+     * @return list<string>
+     */
+    private function permisosDe(?User $usuario): array
+    {
+        if ($usuario === null) {
+            return [];
+        }
+
+        if ($usuario->es_super_admin || $usuario->es_admin) {
+            return Modulo::permisos();
+        }
+
+        return $usuario->getAllPermissions()->pluck('name')->values()->all();
+    }
+
+    /**
      * Define the props that are shared by default.
      *
      * @see https://inertiajs.com/shared-data
@@ -40,6 +62,7 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+                'permisos' => fn (): array => $this->permisosDe($request->user()),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

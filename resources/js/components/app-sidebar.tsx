@@ -1,5 +1,12 @@
-import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
+import {
+    BookOpen,
+    Building2,
+    FolderGit2,
+    LayoutGrid,
+    ShieldCheck,
+    Users,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -14,13 +21,40 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+import { index as tenantsIndex } from '@/routes/admin/tenants';
+import { index as rolesIndex } from '@/routes/gestion/roles';
+import { index as usuariosIndex } from '@/routes/gestion/usuarios';
+import type { Auth, NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+];
+
+const adminNavItems: NavItem[] = [
+    {
+        title: 'Tenants',
+        href: tenantsIndex(),
+        icon: Building2,
+    },
+];
+
+// Opciones de gestión del tenant y el permiso que habilita cada una.
+const gestionNavItems: (NavItem & { permiso: string })[] = [
+    {
+        title: 'Usuarios',
+        href: usuariosIndex(),
+        icon: Users,
+        permiso: 'usuarios.ver',
+    },
+    {
+        title: 'Roles',
+        href: rolesIndex(),
+        icon: ShieldCheck,
+        permiso: 'roles.ver',
     },
 ];
 
@@ -38,6 +72,15 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const { auth } = usePage<{ auth: Auth }>().props;
+    // El super administrador no tiene tenant, así que no ve la gestión interna.
+    const opcionesGestion =
+        auth.user.tenant_id == null
+            ? []
+            : gestionNavItems.filter((item) =>
+                  auth.permisos.includes(item.permiso),
+              );
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -54,6 +97,12 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
+                {opcionesGestion.length > 0 && (
+                    <NavMain items={opcionesGestion} label="Gestión" />
+                )}
+                {auth.user.es_super_admin && (
+                    <NavMain items={adminNavItems} label="Administración" />
+                )}
             </SidebarContent>
 
             <SidebarFooter>

@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -24,6 +26,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureAuthorization();
+    }
+
+    /**
+     * El super administrador y el administrador de un tenant tienen acceso
+     * total en su ámbito: no dependen de ningún rol, así que nadie puede
+     * quedarse bloqueado por borrar o editar un rol.
+     */
+    protected function configureAuthorization(): void
+    {
+        Gate::before(fn (User $user): ?bool => $user->es_super_admin || $user->es_admin ? true : null);
     }
 
     /**
