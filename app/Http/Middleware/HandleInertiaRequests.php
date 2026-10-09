@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\Modulo;
+use App\Models\Empresa;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -49,6 +50,28 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
+     * Nombre, logo e ícono de la empresa del usuario, para mostrarlos en el
+     * menú, el título y el favicon. Es null si el usuario no tiene tenant (el
+     * super administrador) o su tenant aún no registró la empresa.
+     *
+     * @return array{nombre: string, logo_url: ?string, icono_url: ?string}|null
+     */
+    private function marcaDeEmpresa(?User $usuario): ?array
+    {
+        if ($usuario?->tenant_id === null) {
+            return null;
+        }
+
+        $empresa = Empresa::query()->first();
+
+        return $empresa === null ? null : [
+            'nombre' => $empresa->nombre_empresa,
+            'logo_url' => $empresa->logoUrl(),
+            'icono_url' => $empresa->iconoUrl(),
+        ];
+    }
+
+    /**
      * Define the props that are shared by default.
      *
      * @see https://inertiajs.com/shared-data
@@ -64,6 +87,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
                 'permisos' => fn (): array => $this->permisosDe($request->user()),
             ],
+            'marca' => fn (): ?array => $this->marcaDeEmpresa($request->user()),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

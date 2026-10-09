@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as tenantsIndex } from '@/routes/admin/tenants';
+import { edit as empresaEdit } from '@/routes/gestion/empresa';
 import { index as rolesIndex } from '@/routes/gestion/roles';
 import { index as usuariosIndex } from '@/routes/gestion/usuarios';
 import type { Auth, NavItem } from '@/types';
@@ -44,6 +45,12 @@ const adminNavItems: NavItem[] = [
 
 // Opciones de gestión del tenant y el permiso que habilita cada una.
 const gestionNavItems: (NavItem & { permiso: string })[] = [
+    {
+        title: 'Mi empresa',
+        href: empresaEdit(),
+        icon: Building2,
+        permiso: 'empresa.ver',
+    },
     {
         title: 'Usuarios',
         href: usuariosIndex(),

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Perfil de la empresa de un tenant (nombre, NIT, logo, etc.). Cada tenant
@@ -31,4 +32,19 @@ class Empresa extends Model
         'cuentas_bancarias' => 'array',
         'mostrar_productos_sin_inventario' => 'boolean',
     ];
+
+    public function logoUrl(): ?string
+    {
+        return $this->urlDeImagen($this->logo_empresa);
+    }
+
+    public function iconoUrl(): ?string
+    {
+        return $this->urlDeImagen($this->icono_empresa);
+    }
+
+    private function urlDeImagen(?string $ruta): ?string
+    {
+        return $ruta ? Storage::disk('public')->url($ruta) : null;
+    }
 }

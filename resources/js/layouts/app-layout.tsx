@@ -1,3 +1,4 @@
+import { useEmpresaBranding } from '@/hooks/use-empresa-branding';
 import AppLayoutTemplate from '@/layouts/app/app-sidebar-layout';
 import type { BreadcrumbItem } from '@/types';
 
@@ -8,6 +9,8 @@ export default function AppLayout({
     breadcrumbs?: BreadcrumbItem[];
     children: React.ReactNode;
 }) {
+    useEmpresaBranding();
+
     return (
         <AppLayoutTemplate breadcrumbs={breadcrumbs}>
             {children}
