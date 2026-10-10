@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Gestion;
 
 use App\Actions\Archivos\GuardarArchivoPublico;
+use App\Actions\Importaciones\PanelDeImportacion;
 use App\Enums\Modulo;
 use App\Http\Controllers\Concerns\EsCrudDeGestion;
 use App\Http\Controllers\Controller;
@@ -39,33 +40,21 @@ class ClienteController extends Controller implements HasMiddleware
     }
 
     /**
-     * Lista los clientes, filtrando por razón social, documento, correo o
-     * teléfono, y opcionalmente solo los eliminados. Incluye las rutas y los
-     * comerciales disponibles para el formulario.
+     * Lista todos los clientes, eliminados incluidos: la búsqueda, el orden, la
+     * paginación y el filtro de eliminados los hace el navegador. Incluye las
+     * rutas y los comerciales disponibles para el formulario.
      */
     public function index(Request $request): Response
     {
-        $filtros = [
-            'buscar' => (string) $request->query('buscar', ''),
-            'eliminados' => $request->boolean('eliminados'),
-        ];
-
         $clientes = Cliente::query()
+            ->withTrashed()
             ->with(['ruta:id,ruta', 'comercial:id,name'])
-            ->when($filtros['eliminados'], fn ($query) => $query->onlyTrashed())
-            ->when($filtros['buscar'] !== '', fn ($query) => $query->where(function ($query) use ($filtros): void {
-                $query->where('razon_social', 'like', "%{$filtros['buscar']}%")
-                    ->orWhere('numero_documento', 'like', "%{$filtros['buscar']}%")
-                    ->orWhere('email', 'like', "%{$filtros['buscar']}%")
-                    ->orWhere('telefono', 'like', "%{$filtros['buscar']}%");
-            }))
             ->orderBy('razon_social')
-            ->paginate(15)
-            ->withQueryString();
+            ->get();
 
         return Inertia::render('gestion/clientes/index', [
             'clientes' => ClienteResource::collection($clientes),
-            'filtros' => $filtros,
+            ...PanelDeImportacion::props(['clientes']),
             'rutas' => Ruta::query()
                 ->orderBy('ruta')
                 ->get(['id', 'ruta'])

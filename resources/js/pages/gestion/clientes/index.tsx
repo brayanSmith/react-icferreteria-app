@@ -1,24 +1,33 @@
 import { Head, Link } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 import ClienteController from '@/actions/App/Http/Controllers/Gestion/ClienteController';
 import ClienteFields from '@/components/clientes/cliente-fields';
 import ConfirmDeleteDialog from '@/components/crud/confirm-delete-dialog';
 import CrudTable from '@/components/crud/crud-table';
+import ExportarMenu from '@/components/crud/exportar-menu';
 import FormDialog from '@/components/crud/form-dialog';
-import ListFilters from '@/components/crud/list-filters';
+import ImportacionesPanel from '@/components/crud/importaciones-panel';
+import ImportarDialog from '@/components/crud/importar-dialog';
+import EliminadosToggle from '@/components/crud/eliminados-toggle';
 import PageHeader from '@/components/crud/page-header';
-import PaginationFooter from '@/components/crud/pagination-footer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCan } from '@/hooks/use-can';
 import { TIPOS_CLIENTE, etiquetaDe } from '@/lib/catalogos';
 import { index, restore } from '@/routes/gestion/clientes';
-import type { Cliente, OpcionSelect, Paginated } from '@/types';
+import type {
+    Cliente,
+    Importacion,
+    ImportacionPendiente,
+    OpcionSelect,
+} from '@/types';
 
 type Props = {
-    clientes: Paginated<Cliente>;
-    filtros: { buscar: string; eliminados: boolean };
+    clientes: { data: Cliente[] };
     rutas: OpcionSelect[];
     comerciales: OpcionSelect[];
+    importaciones: { data: Importacion[] };
+    importacionPendiente: ImportacionPendiente | null;
 };
 
 const moneda = new Intl.NumberFormat('es-CO', {
@@ -28,16 +37,25 @@ const moneda = new Intl.NumberFormat('es-CO', {
 });
 
 /**
- * Clientes del tenant, con búsqueda y paginación. Se eliminan de forma lógica y
+ * Clientes del tenant, con búsqueda y paginación en el navegador. Se eliminan de forma lógica y
  * se restauran desde "Ver eliminados".
  */
 export default function ClientesIndex({
     clientes,
-    filtros,
     rutas,
     comerciales,
+    importaciones,
+    importacionPendiente,
 }: Props) {
     const can = useCan();
+    const [verEliminados, setVerEliminados] = useState(false);
+    const filas = useMemo(
+        () =>
+            clientes.data.filter(
+                (cliente) => (cliente.deleted_at !== null) === verEliminados,
+            ),
+        [clientes.data, verEliminados],
+    );
 
     return (
         <>
@@ -48,49 +66,74 @@ export default function ClientesIndex({
                     titulo="Clientes"
                     descripcion="Personas y empresas a las que les vendes"
                     accion={
-                        can('clientes.crear') && (
-                            <FormDialog
-                                titulo="Nuevo cliente"
-                                accion={ClienteController.store.form()}
-                                etiquetaGuardar="Crear cliente"
-                                ancho="xl"
-                                trigger={<Button>Nuevo cliente</Button>}
-                            >
-                                {({ errors }) => (
-                                    <ClienteFields
-                                        errors={errors}
-                                        rutas={rutas}
-                                        comerciales={comerciales}
+                        <div className="flex flex-wrap gap-2">
+                            <ExportarMenu modulo="clientes" />
+                            {can('clientes.crear') && (
+                                <>
+                                    <ImportarDialog
+                                        tipos={[
+                                            {
+                                                valor: 'clientes',
+                                                etiqueta: 'Clientes',
+                                            },
+                                        ]}
+                                        pendiente={importacionPendiente}
                                     />
-                                )}
-                            </FormDialog>
-                        )
+                                    <FormDialog
+                                        titulo="Nuevo cliente"
+                                        accion={ClienteController.store.form()}
+                                        etiquetaGuardar="Crear cliente"
+                                        ancho="xl"
+                                        trigger={<Button>Nuevo cliente</Button>}
+                                    >
+                                        {({ errors }) => (
+                                            <ClienteFields
+                                                errors={errors}
+                                                rutas={rutas}
+                                                comerciales={comerciales}
+                                            />
+                                        )}
+                                    </FormDialog>
+                                </>
+                            )}
+                        </div>
                     }
                 />
 
-                <ListFilters
-                    url={index.url()}
-                    buscar={filtros.buscar}
-                    placeholder="Buscar por nombre, documento, correo o teléfono"
-                    eliminados={{
-                        parametro: 'eliminados',
-                        etiqueta: 'Ver eliminados',
-                        activo: filtros.eliminados,
-                    }}
-                />
+                <ImportacionesPanel importaciones={importaciones.data} />
 
                 <CrudTable
-                    filas={clientes.data}
+                    filas={filas}
+                    busqueda={{
+                        placeholder:
+                            'Buscar por nombre, documento, correo o teléfono',
+                        texto: (c) =>
+                            [c.razon_social, c.numero_documento, c.email, c.telefono].join(' '),
+                    }}
+                    barra={
+                        <EliminadosToggle
+                            id="ver-eliminados"
+                            etiqueta="Ver eliminados"
+                            activo={verEliminados}
+                            onCambiar={setVerEliminados}
+                        />
+                    }
                     clave={(cliente) => cliente.id}
                     vacio={
-                        filtros.eliminados
+                        verEliminados
                             ? 'No hay clientes eliminados.'
                             : 'No hay clientes que coincidan.'
                     }
                     columnas={[
-                        { encabezado: 'N°', celda: (c) => c.numero },
+                        {
+                            encabezado: 'N°',
+                            celda: (c) => c.numero,
+                            valorOrden: (c) => c.numero,
+                        },
                         {
                             encabezado: 'Cliente',
+                            valorFiltro: (c) => `${c.razon_social} ${c.tipo_documento} ${c.numero_documento}`,
+                            valorOrden: (c) => c.razon_social,
                             celda: (c) => (
                                 <div>
                                     <p className="font-medium">
@@ -104,6 +147,7 @@ export default function ClientesIndex({
                         },
                         {
                             encabezado: 'Contacto',
+                            valorFiltro: (c) => `${c.telefono ?? ''} ${c.email ?? ''}`,
                             celda: (c) => (
                                 <div>
                                     <p>{c.telefono ?? '—'}</p>
@@ -115,6 +159,8 @@ export default function ClientesIndex({
                         },
                         {
                             encabezado: 'Ciudad y ruta',
+                            valorFiltro: (c) => `${c.ciudad ?? ''} ${c.ruta ?? ''}`,
+                            valorOrden: (c) => c.ciudad ?? '',
                             celda: (c) => (
                                 <div>
                                     <p>{c.ciudad ?? '—'}</p>
@@ -126,6 +172,8 @@ export default function ClientesIndex({
                         },
                         {
                             encabezado: 'Tipo',
+                            filtro: 'lista',
+                            valorFiltro: (c) => etiquetaDe(TIPOS_CLIENTE, c.tipo_cliente),
                             celda: (c) => (
                                 <Badge variant="outline">
                                     {etiquetaDe(TIPOS_CLIENTE, c.tipo_cliente)}
@@ -135,10 +183,14 @@ export default function ClientesIndex({
                         {
                             encabezado: 'Cartera',
                             alinear: 'derecha',
+                            valorOrden: (c) => c.saldo_cartera,
                             celda: (c) => moneda.format(c.saldo_cartera),
                         },
                         {
                             encabezado: 'Estado',
+                            filtro: 'lista',
+                            valorFiltro: (c) =>
+                                c.deleted_at ? 'Eliminado' : c.activo ? 'Activo' : 'Inactivo',
                             celda: (c) =>
                                 c.deleted_at ? (
                                     <Badge variant="destructive">
@@ -203,8 +255,6 @@ export default function ClientesIndex({
                         )
                     }
                 />
-
-                <PaginationFooter datos={clientes} />
             </div>
         </>
     );

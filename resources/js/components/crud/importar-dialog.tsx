@@ -36,12 +36,17 @@ const MODOS: { valor: Modo; etiqueta: string }[] = [
     { valor: 'ambos', etiqueta: 'Crear y actualizar' },
 ];
 
-const DESCRIPCION_MODO: Record<Modo, string> = {
-    crear: 'Cada fila crea un registro nuevo. Lo que ya existe se omite.',
-    actualizar:
-        'Cada fila modifica un registro que ya existe, identificado por su ID. Las filas cuyo ID no existe se rechazan.',
-    ambos: 'La fila que trae ID actualiza ese registro; la que no trae ID crea uno nuevo.',
-};
+/** Explica qué hace cada modo; `identificador` es cómo se reconoce un registro existente. */
+function descripcionDelModo(modo: Modo, identificador: string): string {
+    switch (modo) {
+        case 'crear':
+            return 'Cada fila crea un registro nuevo. Lo que ya existe se omite.';
+        case 'actualizar':
+            return `Cada fila modifica un registro que ya existe, identificado por ${identificador}. Las filas que no coinciden con ninguno se rechazan.`;
+        case 'ambos':
+            return `Si la fila coincide con un registro existente (por ${identificador}), lo actualiza; si no, crea uno nuevo.`;
+    }
+}
 
 /**
  * Paso 2: el archivo ya está subido y el sistema detectó sus columnas. Aquí el
@@ -54,7 +59,10 @@ function ConfigurarImportacion({
 }: {
     pendiente: ImportacionPendiente;
 }) {
-    const [modo, setModo] = useState<Modo>('crear');
+    const modosDisponibles = MODOS.filter((m) =>
+        pendiente.modos.includes(m.valor),
+    );
+    const [modo, setModo] = useState<Modo>(pendiente.modos[0] ?? 'crear');
     const necesitaId = modo !== 'crear';
     const [seleccion, setSeleccion] = useState<Record<string, string>>(() =>
         Object.fromEntries(
@@ -108,20 +116,38 @@ function ConfigurarImportacion({
                     {({ errors, processing }) => (
                         <>
                             <div className="space-y-2">
-                                <RadioGroupField
-                                    name="modo"
-                                    etiqueta="¿Qué hace este archivo?"
-                                    opciones={MODOS}
-                                    columnas={3}
-                                    defaultValue={modo}
-                                    onValueChange={(valor) =>
-                                        setModo(valor as Modo)
-                                    }
-                                    error={errors.modo}
-                                />
-                                <p className="text-sm text-muted-foreground">
-                                    {DESCRIPCION_MODO[modo]}
-                                </p>
+                                {modosDisponibles.length > 1 ? (
+                                    <>
+                                        <RadioGroupField
+                                            name="modo"
+                                            etiqueta="¿Qué hace este archivo?"
+                                            opciones={modosDisponibles}
+                                            columnas={3}
+                                            defaultValue={modo}
+                                            onValueChange={(valor) =>
+                                                setModo(valor as Modo)
+                                            }
+                                            error={errors.modo}
+                                        />
+                                        <p className="text-sm text-muted-foreground">
+                                            {descripcionDelModo(
+                                                modo,
+                                                pendiente.identificador,
+                                            )}
+                                        </p>
+                                    </>
+                                ) : (
+                                    <input
+                                        type="hidden"
+                                        name="modo"
+                                        value={modo}
+                                    />
+                                )}
+                                {pendiente.aviso && (
+                                    <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                                        {pendiente.aviso}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="space-y-4">

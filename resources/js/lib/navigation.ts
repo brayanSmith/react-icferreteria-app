@@ -6,6 +6,7 @@ import {
     LayoutGrid,
     Package,
     PackagePlus,
+    Boxes,
     Palette,
     Route,
     Ruler,
@@ -31,6 +32,7 @@ import { index as proveedoresIndex } from '@/routes/gestion/proveedores';
 import { index as pucsIndex } from '@/routes/gestion/pucs';
 import { index as rolesIndex } from '@/routes/gestion/roles';
 import { index as rutasIndex } from '@/routes/gestion/rutas';
+import { index as stockBodegasIndex } from '@/routes/gestion/stock-bodegas';
 import { index as stockInicialIndex } from '@/routes/gestion/stock-inicial';
 import { index as usuariosIndex } from '@/routes/gestion/usuarios';
 import { edit as profileEdit } from '@/routes/profile';
@@ -110,6 +112,22 @@ export const ITEMS_NAVEGACION: ItemNavegacion[] = [
         permiso: 'stock_inicial.ver',
         enMenu: true,
         palabrasClave: ['inventario', 'existencias', 'cantidades'],
+    },
+    {
+        title: 'Stock por bodega',
+        href: stockBodegasIndex(),
+        icon: Boxes,
+        grupo: 'catalogos',
+        permiso: 'stock_bodegas.ver',
+        enMenu: true,
+        palabrasClave: [
+            'inventario',
+            'existencias',
+            'kardex',
+            'movimientos',
+            'ingresos',
+            'salidas',
+        ],
     },
     {
         title: 'Categorías',

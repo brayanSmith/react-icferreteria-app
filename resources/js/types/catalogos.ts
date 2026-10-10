@@ -128,6 +128,34 @@ export type StockInicial = {
     deleted_at: string | null;
 };
 
+/** Existencias de un producto en una bodega (stock = entradas - salidas). */
+export type StockBodega = {
+    id: number;
+    producto_id: number;
+    bodega_id: number;
+    codigo_producto?: string;
+    nombre_producto?: string;
+    medida?: string | null;
+    bodega?: string;
+    entradas: number;
+    salidas: number;
+    stock: number;
+    stock_bajo: boolean;
+};
+
+/** Un ingreso o una salida de inventario. */
+export type MovimientoStock = {
+    id: number;
+    tipo: 'INGRESO' | 'SALIDA';
+    cantidad: number;
+    /** De dónde viene: "Manual" o el documento que lo generó (por ejemplo, "Stock inicial"). */
+    origen: string;
+    descripcion: string;
+    usuario?: string | null;
+    fecha: string | null;
+    editable: boolean;
+};
+
 export type Cliente = {
     id: number;
     numero: number;
@@ -201,6 +229,12 @@ export type Importacion = {
 export type ImportacionPendiente = {
     id: number;
     etiqueta: string;
+    /** Cómo se identifica un registro existente ("su ID", "su código"...). */
+    identificador: string;
+    /** Advertencia propia del módulo, si la tiene. */
+    aviso: string | null;
+    /** Modos que admite el módulo. */
+    modos: ('crear' | 'actualizar' | 'ambos')[];
     nombre_original: string;
     delimitador: string | null;
     encabezados: string[];

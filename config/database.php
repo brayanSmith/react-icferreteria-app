@@ -38,9 +38,12 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
+            // SQLite admite un solo escritor a la vez. Con la cola, las sesiones y la app
+            // escribiendo en el mismo archivo, hay que esperar el turno en vez de fallar
+            // con "database is locked", y el modo WAL evita que las lecturas bloqueen a las escrituras.
+            'busy_timeout' => env('DB_BUSY_TIMEOUT', 15000),
+            'journal_mode' => env('DB_JOURNAL_MODE', 'WAL'),
+            'synchronous' => env('DB_SYNCHRONOUS', 'NORMAL'),
             'transaction_mode' => 'DEFERRED',
         ],
 

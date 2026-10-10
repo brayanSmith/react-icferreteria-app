@@ -40,12 +40,80 @@ abstract class Importador
     abstract public function columnaId(): string;
 
     /**
+     * Cómo se identifica un registro que ya existe, para explicárselo al
+     * usuario en el modo "actualizar" ("su ID", "su código"...).
+     */
+    public function identificador(): string
+    {
+        return 'su ID';
+    }
+
+    /**
+     * Modos que admite el módulo. Casi todos admiten los tres; uno cuyos
+     * registros no se pueden identificar después (como un movimiento de
+     * inventario) solo admite crear.
+     *
+     * @return list<string>
+     */
+    public function modosPermitidos(): array
+    {
+        return [Importacion::MODO_CREAR, Importacion::MODO_ACTUALIZAR, Importacion::MODO_AMBOS];
+    }
+
+    /**
+     * Advertencia que se muestra al relacionar las columnas, si el módulo la necesita.
+     */
+    public function aviso(): ?string
+    {
+        return null;
+    }
+
+    /**
      * Columnas que el usuario debe relacionar según el modo. En "crear" no hace
      * falta el ID; "actualizar" y "ambos" lo necesitan.
      *
      * @return list<string>
      */
     abstract public function columnasRequeridas(string $modo): array;
+
+    /**
+     * Deja los valores de la fila en la forma que esperan las reglas (por
+     * ejemplo, "Materia prima" pasa a MATERIA_PRIMA). Por defecto no cambia nada.
+     *
+     * @param  array<string, string|null>  $datos
+     * @return array<string, string|null>
+     */
+    public function normalizar(array $datos): array
+    {
+        return $datos;
+    }
+
+    /**
+     * Mensajes de validación en español para el reporte de filas con error;
+     * :attribute es el nombre de la columna tal como la ve el usuario.
+     *
+     * @return array<string, string>
+     */
+    public function mensajes(): array
+    {
+        return [
+            'required' => 'Falta :attribute.',
+            'string' => ':attribute no es válido.',
+            // Las reglas de tamaño llevan un mensaje por tipo de valor.
+            'max' => [
+                'string' => ':attribute no puede pasar de :max caracteres.',
+                'numeric' => ':attribute no puede ser mayor a :max.',
+            ],
+            'min' => [
+                'string' => ':attribute debe tener al menos :min caracteres.',
+                'numeric' => ':attribute no puede ser menor a :min.',
+            ],
+            'numeric' => ':attribute debe ser un número.',
+            'integer' => ':attribute debe ser un número entero.',
+            'in' => ':attribute tiene un valor que no se permite.',
+            'boolean' => ':attribute debe ser sí o no.',
+        ];
+    }
 
     /**
      * Qué se hace con una fila: en "ambos", la que trae ID actualiza y la que no, crea.

@@ -16,6 +16,12 @@ class Registro
         return [
             'categorias' => ImportadorCategorias::class,
             'subcategorias' => ImportadorSubCategorias::class,
+            'pucs' => ImportadorPucs::class,
+            'productos' => ImportadorProductos::class,
+            'clientes' => ImportadorClientes::class,
+            'usuarios' => ImportadorUsuarios::class,
+            'stock_inicial' => ImportadorStockInicial::class,
+            'movimientos_stock' => ImportadorMovimientosStock::class,
         ];
     }
 

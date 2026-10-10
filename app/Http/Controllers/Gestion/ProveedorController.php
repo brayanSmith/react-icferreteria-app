@@ -10,7 +10,6 @@ use App\Http\Requests\Gestion\GuardarProveedorRequest;
 use App\Http\Resources\ProveedorResource;
 use App\Models\Proveedor;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Arr;
@@ -36,30 +35,18 @@ class ProveedorController extends Controller implements HasMiddleware
     }
 
     /**
-     * Lista los proveedores, filtrando por nombre, razón social o NIT, y
-     * opcionalmente solo los eliminados.
+     * Lista todos los proveedores, eliminados incluidos: la búsqueda, el orden,
+     * la paginación y el filtro de eliminados los hace el navegador.
      */
-    public function index(Request $request): Response
+    public function index(): Response
     {
-        $filtros = [
-            'buscar' => (string) $request->query('buscar', ''),
-            'eliminados' => $request->boolean('eliminados'),
-        ];
-
         $proveedores = Proveedor::query()
-            ->when($filtros['eliminados'], fn ($query) => $query->onlyTrashed())
-            ->when($filtros['buscar'] !== '', fn ($query) => $query->where(function ($query) use ($filtros): void {
-                $query->where('nombre_proveedor', 'like', "%{$filtros['buscar']}%")
-                    ->orWhere('razon_social_proveedor', 'like', "%{$filtros['buscar']}%")
-                    ->orWhere('nit_proveedor', 'like', "%{$filtros['buscar']}%");
-            }))
+            ->withTrashed()
             ->orderBy('nombre_proveedor')
-            ->paginate(15)
-            ->withQueryString();
+            ->get();
 
         return Inertia::render('gestion/proveedores/index', [
             'proveedores' => ProveedorResource::collection($proveedores),
-            'filtros' => $filtros,
         ]);
     }
 

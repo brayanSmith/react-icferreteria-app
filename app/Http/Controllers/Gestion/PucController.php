@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Gestion;
 
+use App\Actions\Importaciones\PanelDeImportacion;
 use App\Enums\Modulo;
 use App\Http\Controllers\Concerns\EsCrudDeGestion;
 use App\Http\Controllers\Controller;
@@ -9,7 +10,6 @@ use App\Http\Requests\Gestion\GuardarPucRequest;
 use App\Http\Resources\PucResource;
 use App\Models\Puc;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Inertia\Inertia;
@@ -35,25 +35,16 @@ class PucController extends Controller implements HasMiddleware
     }
 
     /**
-     * Lista las cuentas, filtrando por cuenta, subcuenta o concepto.
+     * Lista todas las cuentas del plan: la búsqueda, el orden y la paginación
+     * las hace el navegador.
      */
-    public function index(Request $request): Response
+    public function index(): Response
     {
-        $buscar = (string) $request->query('buscar', '');
-
-        $cuentas = Puc::query()
-            ->when($buscar !== '', fn ($query) => $query->where(function ($query) use ($buscar): void {
-                $query->where('cuenta', 'like', "%{$buscar}%")
-                    ->orWhere('subcuenta', 'like', "%{$buscar}%")
-                    ->orWhere('concepto', 'like', "%{$buscar}%");
-            }))
-            ->orderBy('subcuenta')
-            ->paginate(15)
-            ->withQueryString();
+        $cuentas = Puc::query()->orderBy('subcuenta')->get();
 
         return Inertia::render('gestion/pucs/index', [
             'cuentas' => PucResource::collection($cuentas),
-            'filtros' => ['buscar' => $buscar],
+            ...PanelDeImportacion::props(['pucs']),
         ]);
     }
 
@@ -101,7 +92,7 @@ class PucController extends Controller implements HasMiddleware
      */
     private function conConcatenado(array $datos): array
     {
-        $datos['concatenar_subcuenta_concepto'] = "{$datos['subcuenta']} - {$datos['concepto']}";
+        $datos['concatenar_subcuenta_concepto'] = Puc::textoConcatenado($datos['subcuenta'], $datos['concepto']);
 
         return $datos;
     }

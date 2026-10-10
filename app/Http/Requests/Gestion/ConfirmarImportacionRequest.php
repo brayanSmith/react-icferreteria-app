@@ -20,13 +20,19 @@ use Illuminate\Validation\Validator;
 class ConfirmarImportacionRequest extends FormRequest
 {
     /**
-     * Confirmar exige poder crear en el módulo de la importación.
+     * Confirmar exige poder crear en el módulo de la importación y, si el archivo
+     * modifica registros existentes (actualizar o crear y actualizar), también poder editar.
      */
     public function authorize(): bool
     {
         $importador = Registro::importador($this->route('importacion')->modulo);
 
-        return $importador !== null && Gate::allows("{$importador->modulo()->value}.crear");
+        if ($importador === null || ! Gate::allows("{$importador->modulo()->value}.crear")) {
+            return false;
+        }
+
+        return $this->input('modo') === Importacion::MODO_CREAR
+            || Gate::allows("{$importador->modulo()->value}.editar");
     }
 
     /**
@@ -37,7 +43,7 @@ class ConfirmarImportacionRequest extends FormRequest
         $totalColumnas = count($this->route('importacion')->encabezados ?? []);
 
         return [
-            'modo' => ['required', Rule::in([Importacion::MODO_CREAR, Importacion::MODO_ACTUALIZAR, Importacion::MODO_AMBOS])],
+            'modo' => ['required', Rule::in(Registro::importador($this->route('importacion')->modulo)?->modosPermitidos() ?? [Importacion::MODO_CREAR])],
             'mapeo' => ['required', 'array'],
             'mapeo.*' => ['nullable', 'integer', 'min:0', 'max:'.max(0, $totalColumnas - 1)],
         ];

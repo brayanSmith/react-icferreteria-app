@@ -54,6 +54,9 @@ class PanelDeImportacion
             'encabezados' => $importacion->encabezados ?? [],
             'muestra' => $importacion->muestra ?? [],
             'sugerencia' => $importador->sugerirMapeo($importacion->encabezados ?? []),
+            'modos' => $importador->modosPermitidos(),
+            'identificador' => $importador->identificador(),
+            'aviso' => $importador->aviso(),
             'columnas' => collect($importador->columnas())
                 ->map(fn (string $etiqueta, string $clave): array => [
                     'clave' => $clave,

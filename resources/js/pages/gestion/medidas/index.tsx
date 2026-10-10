@@ -99,12 +99,15 @@ export default function MedidasIndex({
                         },
                         {
                             encabezado: 'Tipo',
+                            filtro: 'lista',
+                            valorFiltro: (m) => etiquetaDe(TIPOS_MEDIDA, m.tipo_medida),
                             valorOrden: (m) => m.tipo_medida,
                             celda: (m) =>
                                 etiquetaDe(TIPOS_MEDIDA, m.tipo_medida),
                         },
                         {
                             encabezado: 'Descripción',
+                            valorFiltro: (m) => m.descripcion_medida ?? '',
                             celda: (m) => m.descripcion_medida ?? '—',
                         },
                         {

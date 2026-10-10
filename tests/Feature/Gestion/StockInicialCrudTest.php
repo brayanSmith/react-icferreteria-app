@@ -148,7 +148,7 @@ class StockInicialCrudTest extends TestCase
         $this->assertSame($producto->id, $stock->producto_id);
     }
 
-    public function test_el_listado_busca_por_producto_y_separa_activos_de_eliminados(): void
+    public function test_el_listado_trae_activos_y_eliminados_para_filtrar_en_el_navegador(): void
     {
         $martillo = $this->crearProductoEn($this->tenant, $this->catalogos, ['codigo_producto' => 'A', 'nombre_producto' => 'Martillo']);
         $serrucho = $this->crearProductoEn($this->tenant, $this->catalogos, ['codigo_producto' => 'B', 'nombre_producto' => 'Serrucho']);
@@ -157,18 +157,20 @@ class StockInicialCrudTest extends TestCase
         $this->stockEn($serrucho);
         $this->stockEn($cincel)->delete();
 
-        $this->get(route('gestion.stock-inicial.index', ['buscar' => 'Martillo']))
+        $this->get(route('gestion.stock-inicial.index'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('gestion/stock-inicial/index')
-                ->has('stocks.data', 1)
-                ->where('stocks.data.0.nombre_producto', 'Martillo')
-                ->where('stocks.data.0.bodega', 'Principal'));
-
-        $this->get(route('gestion.stock-inicial.index', ['eliminados' => 1]))
-            ->assertInertia(fn ($page) => $page
-                ->has('stocks.data', 1)
-                ->where('stocks.data.0.nombre_producto', 'Cincel'));
+                ->has('stocks.data', 3)
+                ->where('stocks.data', fn ($filas) => collect($filas)
+                    ->whereNotNull('deleted_at')
+                    ->pluck('nombre_producto')
+                    ->all() === ['Cincel'])
+                ->where('stocks.data', fn ($filas) => collect($filas)
+                    ->whereNull('deleted_at')
+                    ->pluck('bodega')
+                    ->unique()
+                    ->all() === ['Principal']));
     }
 
     public function test_el_listado_trae_productos_y_bodegas_para_el_formulario(): void

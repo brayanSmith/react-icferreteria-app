@@ -57,7 +57,7 @@ class BodegaCrudTest extends TestCase
         $this->assertSame('Nueva', $bodega->refresh()->ubicacion_bodega);
     }
 
-    public function test_el_listado_muestra_activas_y_eliminadas_por_separado(): void
+    public function test_el_listado_trae_activas_y_eliminadas_del_tenant_para_filtrar_en_el_navegador(): void
     {
         $this->crearEn(Bodega::class, $this->tenant, ['nombre_bodega' => 'Activa']);
         $this->crearEn(Bodega::class, $this->tenant, ['nombre_bodega' => 'Borrada'])->delete();
@@ -66,13 +66,11 @@ class BodegaCrudTest extends TestCase
         $this->get(route('gestion.bodegas.index'))
             ->assertInertia(fn ($page) => $page
                 ->component('gestion/bodegas/index')
-                ->has('bodegas.data', 1)
-                ->where('bodegas.data.0.nombre_bodega', 'Activa'));
-
-        $this->get(route('gestion.bodegas.index', ['eliminadas' => 1]))
-            ->assertInertia(fn ($page) => $page
-                ->has('bodegas.data', 1)
-                ->where('bodegas.data.0.nombre_bodega', 'Borrada'));
+                ->has('bodegas.data', 2)
+                ->where('bodegas.data.0.nombre_bodega', 'Activa')
+                ->where('bodegas.data.0.deleted_at', null)
+                ->where('bodegas.data.1.nombre_bodega', 'Borrada')
+                ->whereNot('bodegas.data.1.deleted_at', null));
     }
 
     public function test_elimina_de_forma_logica_y_restaura(): void

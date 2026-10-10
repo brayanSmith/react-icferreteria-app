@@ -8,11 +8,13 @@ use App\Http\Controllers\Gestion\ExportacionController;
 use App\Http\Controllers\Gestion\FormulaController;
 use App\Http\Controllers\Gestion\ImportacionController;
 use App\Http\Controllers\Gestion\MedidaController;
+use App\Http\Controllers\Gestion\MovimientoStockController;
 use App\Http\Controllers\Gestion\ProductoController;
 use App\Http\Controllers\Gestion\ProveedorController;
 use App\Http\Controllers\Gestion\PucController;
 use App\Http\Controllers\Gestion\RoleController;
 use App\Http\Controllers\Gestion\RutaController;
+use App\Http\Controllers\Gestion\StockBodegaController;
 use App\Http\Controllers\Gestion\StockInicialController;
 use App\Http\Controllers\Gestion\SubCategoriaController;
 use App\Http\Controllers\Gestion\UserController;
@@ -62,6 +64,14 @@ Route::middleware(['auth', 'verified', 'has-tenant'])
             ->only(['index', 'store', 'update', 'destroy']);
         Route::post('stock-inicial/{stock_inicial}/restore', [StockInicialController::class, 'restore'])
             ->withTrashed()->name('stock-inicial.restore');
+
+        // Existencias por bodega: se mueven con ingresos y salidas, no se editan ni se eliminan.
+        Route::resource('stock-bodegas', StockBodegaController::class)
+            ->parameters(['stock-bodegas' => 'stock_bodega'])
+            ->only(['index', 'show', 'store']);
+        Route::resource('stock-bodegas.movimientos', MovimientoStockController::class)
+            ->parameters(['stock-bodegas' => 'stock_bodega', 'movimientos' => 'movimiento'])
+            ->only(['update', 'destroy']);
 
         Route::resource('productos', ProductoController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::post('productos/{producto}/restore', [ProductoController::class, 'restore'])

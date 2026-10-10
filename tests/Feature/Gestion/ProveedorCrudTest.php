@@ -113,7 +113,7 @@ class ProveedorCrudTest extends TestCase
             ->assertSessionHasErrors('rut');
     }
 
-    public function test_el_listado_busca_y_separa_activos_de_eliminados(): void
+    public function test_el_listado_trae_activos_y_eliminados_del_tenant_para_filtrar_en_el_navegador(): void
     {
         $this->crearEn(Proveedor::class, $this->tenant, $this->datos());
         // Se anula la razón social para que solo el primero contenga la palabra buscada.
@@ -121,17 +121,16 @@ class ProveedorCrudTest extends TestCase
         $this->crearEn(Proveedor::class, $this->tenant, $this->datos(['nombre_proveedor' => 'Cerrado SA', 'razon_social_proveedor' => null, 'nit_proveedor' => '3']))->delete();
         $this->crearEn(Proveedor::class, Tenant::factory()->create(), $this->datos(['nombre_proveedor' => 'Aceros ajenos', 'nit_proveedor' => '4']));
 
-        $this->get(route('gestion.proveedores.index', ['buscar' => 'Aceros']))
+        $this->get(route('gestion.proveedores.index'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('gestion/proveedores/index')
-                ->has('proveedores.data', 1)
-                ->where('proveedores.data.0.nombre_proveedor', 'Aceros del Sur'));
-
-        $this->get(route('gestion.proveedores.index', ['eliminados' => 1]))
-            ->assertInertia(fn ($page) => $page
-                ->has('proveedores.data', 1)
-                ->where('proveedores.data.0.nombre_proveedor', 'Cerrado SA'));
+                ->has('proveedores.data', 3)
+                ->where('proveedores.data.0.nombre_proveedor', 'Aceros del Sur')
+                ->where('proveedores.data.0.deleted_at', null)
+                ->where('proveedores.data.1.nombre_proveedor', 'Cerrado SA')
+                ->whereNot('proveedores.data.1.deleted_at', null)
+                ->where('proveedores.data.2.nombre_proveedor', 'Tornillos SA'));
     }
 
     public function test_elimina_de_forma_logica_y_restaura(): void

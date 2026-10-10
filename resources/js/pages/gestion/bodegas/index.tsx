@@ -1,9 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 import BodegaController from '@/actions/App/Http/Controllers/Gestion/BodegaController';
 import ConfirmDeleteDialog from '@/components/crud/confirm-delete-dialog';
 import CrudTable from '@/components/crud/crud-table';
 import FormDialog from '@/components/crud/form-dialog';
-import ListFilters from '@/components/crud/list-filters';
+import EliminadosToggle from '@/components/crud/eliminados-toggle';
 import PageHeader from '@/components/crud/page-header';
 import TextField from '@/components/crud/text-field';
 import { Badge } from '@/components/ui/badge';
@@ -44,15 +45,22 @@ function CamposBodega({
 
 type Props = {
     bodegas: { data: Bodega[] };
-    eliminadas: boolean;
 };
 
 /**
  * Bodegas del tenant. Se eliminan de forma lógica y se restauran desde la
  * vista "Ver eliminadas".
  */
-export default function BodegasIndex({ bodegas, eliminadas }: Props) {
+export default function BodegasIndex({ bodegas }: Props) {
     const can = useCan();
+    const [verEliminadas, setVerEliminadas] = useState(false);
+    const filas = useMemo(
+        () =>
+            bodegas.data.filter(
+                (bodega) => (bodega.deleted_at !== null) === verEliminadas,
+            ),
+        [bodegas.data, verEliminadas],
+    );
 
     return (
         <>
@@ -78,20 +86,19 @@ export default function BodegasIndex({ bodegas, eliminadas }: Props) {
                     }
                 />
 
-                <ListFilters
-                    url={index.url()}
-                    eliminados={{
-                        parametro: 'eliminadas',
-                        etiqueta: 'Ver eliminadas',
-                        activo: eliminadas,
-                    }}
-                />
-
                 <CrudTable
-                    filas={bodegas.data}
+                    filas={filas}
+                    barra={
+                        <EliminadosToggle
+                            id="ver-eliminadas"
+                            etiqueta="Ver eliminadas"
+                            activo={verEliminadas}
+                            onCambiar={setVerEliminadas}
+                        />
+                    }
                     clave={(bodega) => bodega.id}
                     vacio={
-                        eliminadas
+                        verEliminadas
                             ? 'No hay bodegas eliminadas.'
                             : 'Todavía no hay bodegas.'
                     }
@@ -107,6 +114,7 @@ export default function BodegasIndex({ bodegas, eliminadas }: Props) {
                         },
                         {
                             encabezado: 'Ubicación',
+                            valorFiltro: (b) => b.ubicacion_bodega ?? '',
                             celda: (b) => b.ubicacion_bodega ?? '—',
                         },
                         {
@@ -117,6 +125,8 @@ export default function BodegasIndex({ bodegas, eliminadas }: Props) {
                         },
                         {
                             encabezado: 'Estado',
+                            filtro: 'lista',
+                            valorFiltro: (b) => (b.deleted_at ? 'Eliminada' : 'Activa'),
                             celda: (b) =>
                                 b.deleted_at ? (
                                     <Badge variant="destructive">

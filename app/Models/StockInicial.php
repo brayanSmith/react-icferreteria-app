@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -47,5 +48,15 @@ class StockInicial extends Model
     public function bodega(): BelongsTo
     {
         return $this->belongsTo(Bodega::class);
+    }
+
+    /**
+     * Movimiento de inventario que este stock inicial generó en la bodega.
+     *
+     * @return MorphOne<DetalleStock, $this>
+     */
+    public function movimiento(): MorphOne
+    {
+        return $this->morphOne(DetalleStock::class, 'origen');
     }
 }

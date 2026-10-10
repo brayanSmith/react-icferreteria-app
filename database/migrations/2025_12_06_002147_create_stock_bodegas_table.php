@@ -13,12 +13,17 @@ return new class extends Migration
     {
         Schema::create('stock_bodegas', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->foreignId('bodega_id')->constrained('bodegas');
             $table->foreignId('producto_id')->constrained('productos');
-            $table->decimal('entradas')->default(0);
-            $table->decimal('salidas')->default(0);
-            $table->decimal('stock')->default(0);
+            // Un producto tiene un único registro por bodega dentro de cada tenant.
+            $table->unique(['tenant_id', 'producto_id', 'bodega_id']);
+            $table->decimal('entradas', 12, 2)->default(0);
+            $table->decimal('salidas', 12, 2)->default(0);
+            // Siempre es entradas - salidas; lo calcula el modelo al guardar.
+            $table->decimal('stock', 12, 2)->default(0);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

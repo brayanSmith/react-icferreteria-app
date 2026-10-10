@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Gestion;
 
+use App\Actions\Importaciones\PanelDeImportacion;
+use App\Actions\Stock\SincronizarStockInicial;
 use App\Enums\Modulo;
 use App\Http\Controllers\Concerns\EsCrudDeGestion;
 use App\Http\Controllers\Controller;
@@ -14,6 +16,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,6 +27,12 @@ use Inertia\Response;
  * Se lista con búsqueda por producto y paginación, se elimina de forma lógica y
  * se puede restaurar. Al crear se elige producto y bodega; al editar solo se
  * cambia la cantidad.
+ *
+ * Cada stock inicial genera un ingreso en los movimientos de la bodega (ver
+ * MoverStock) y lo sigue: si se corrige la cantidad, se corrige ese movimiento;
+ * si se elimina, se anula; si se restaura, se vuelve a registrar. Como el stock
+ * nunca puede quedar en negativo, no se puede reducir ni eliminar un stock
+ * inicial cuya mercancía ya salió.
  */
 class StockInicialController extends Controller implements HasMiddleware
 {
@@ -37,38 +47,25 @@ class StockInicialController extends Controller implements HasMiddleware
     }
 
     /**
-     * Lista los stocks iniciales, filtrando por código o nombre del producto, y
-     * opcionalmente solo los eliminados. Incluye los productos y bodegas
-     * disponibles para el formulario de alta.
+     * Lista todos los stocks iniciales, eliminados incluidos: la búsqueda, el
+     * orden, la paginación y el filtro de eliminados los hace el navegador.
+     * Incluye los productos y bodegas disponibles para el formulario de alta.
      */
-    public function index(Request $request): Response
+    public function index(): Response
     {
-        $filtros = [
-            'buscar' => (string) $request->query('buscar', ''),
-            'eliminados' => $request->boolean('eliminados'),
-        ];
-
         $stocks = StockInicial::query()
             // Un producto eliminado sigue mostrándose en el historial.
             ->with([
                 'producto' => fn ($query) => $query->withTrashed()->select(['id', 'codigo_producto', 'nombre_producto']),
                 'bodega' => fn ($query) => $query->withTrashed()->select(['id', 'nombre_bodega']),
             ])
-            ->when($filtros['eliminados'], fn ($query) => $query->onlyTrashed())
-            ->when($filtros['buscar'] !== '', fn ($query) => $query->whereHas(
-                'producto',
-                fn ($producto) => $producto->withTrashed()->where(function ($producto) use ($filtros): void {
-                    $producto->where('codigo_producto', 'like', "%{$filtros['buscar']}%")
-                        ->orWhere('nombre_producto', 'like', "%{$filtros['buscar']}%");
-                }),
-            ))
+            ->withTrashed()
             ->latest()
-            ->paginate(15)
-            ->withQueryString();
+            ->get();
 
         return Inertia::render('gestion/stock-inicial/index', [
             'stocks' => StockInicialResource::collection($stocks),
-            'filtros' => $filtros,
+            ...PanelDeImportacion::props(['stock_inicial']),
             'productos' => Producto::query()
                 ->orderBy('nombre_producto')
                 ->get(['id', 'codigo_producto', 'nombre_producto'])
@@ -86,9 +83,11 @@ class StockInicialController extends Controller implements HasMiddleware
     /**
      * Registra el stock inicial de un producto en una bodega.
      */
-    public function store(GuardarStockInicialRequest $request): RedirectResponse
+    public function store(GuardarStockInicialRequest $request, SincronizarStockInicial $sincronizarStock): RedirectResponse
     {
-        StockInicial::create($request->validated());
+        DB::transaction(function () use ($request, $sincronizarStock): void {
+            $sincronizarStock->handle(StockInicial::create($request->validated()), $request->user()->id);
+        });
 
         $this->avisarExito('Stock inicial registrado.');
 
@@ -98,9 +97,14 @@ class StockInicialController extends Controller implements HasMiddleware
     /**
      * Cambia la cantidad de un stock inicial.
      */
-    public function update(GuardarStockInicialRequest $request, StockInicial $stockInicial): RedirectResponse
+    public function update(GuardarStockInicialRequest $request, StockInicial $stockInicial, SincronizarStockInicial $sincronizarStock): RedirectResponse
     {
-        $stockInicial->update($request->validated());
+        // Si el movimiento se rechaza (dejaría el stock en negativo), la cantidad no cambia.
+        DB::transaction(function () use ($request, $stockInicial, $sincronizarStock): void {
+            $stockInicial->update($request->validated());
+
+            $sincronizarStock->handle($stockInicial, $request->user()->id);
+        });
 
         $this->avisarExito('Stock inicial actualizado.');
 
@@ -110,9 +114,20 @@ class StockInicialController extends Controller implements HasMiddleware
     /**
      * Elimina (de forma lógica) un stock inicial.
      */
-    public function destroy(StockInicial $stockInicial): RedirectResponse
+    public function destroy(Request $request, StockInicial $stockInicial, SincronizarStockInicial $sincronizarStock): RedirectResponse
     {
-        $stockInicial->delete();
+        try {
+            DB::transaction(function () use ($request, $stockInicial, $sincronizarStock): void {
+                $stockInicial->delete();
+
+                $sincronizarStock->handle($stockInicial, $request->user()->id);
+            });
+        } catch (ValidationException) {
+            return $this->rechazarEliminacion(
+                'No puedes eliminar este stock inicial: esa mercancía ya tuvo salidas y el stock quedaría en negativo.',
+                'gestion.stock-inicial.index',
+            );
+        }
 
         $this->avisarExito('Stock inicial eliminado.');
 
@@ -122,9 +137,13 @@ class StockInicialController extends Controller implements HasMiddleware
     /**
      * Restaura un stock inicial eliminado.
      */
-    public function restore(StockInicial $stockInicial): RedirectResponse
+    public function restore(Request $request, StockInicial $stockInicial, SincronizarStockInicial $sincronizarStock): RedirectResponse
     {
-        $stockInicial->restore();
+        DB::transaction(function () use ($request, $stockInicial, $sincronizarStock): void {
+            $stockInicial->restore();
+
+            $sincronizarStock->handle($stockInicial, $request->user()->id);
+        });
 
         $this->avisarExito('Stock inicial restaurado.');
 

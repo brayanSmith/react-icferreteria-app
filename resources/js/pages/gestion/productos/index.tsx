@@ -1,12 +1,15 @@
 import { Head, Link } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 import ProductoController from '@/actions/App/Http/Controllers/Gestion/ProductoController';
 import ConfirmDeleteDialog from '@/components/crud/confirm-delete-dialog';
 import CrudTable from '@/components/crud/crud-table';
+import ExportarMenu from '@/components/crud/exportar-menu';
 import FilterTabs from '@/components/crud/filter-tabs';
 import FormDialog from '@/components/crud/form-dialog';
-import ListFilters from '@/components/crud/list-filters';
+import ImportacionesPanel from '@/components/crud/importaciones-panel';
+import ImportarDialog from '@/components/crud/importar-dialog';
+import EliminadosToggle from '@/components/crud/eliminados-toggle';
 import PageHeader from '@/components/crud/page-header';
-import PaginationFooter from '@/components/crud/pagination-footer';
 import ProductoFields from '@/components/productos/producto-fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,15 +18,19 @@ import { CATEGORIAS_PRODUCTO } from '@/lib/catalogos';
 import { index as categoriasIndex } from '@/routes/gestion/categorias';
 import { index as medidasIndex } from '@/routes/gestion/medidas';
 import { index, restore } from '@/routes/gestion/productos';
-import type { CategoriaOpcion, Paginated, Producto } from '@/types';
+import type {
+    CategoriaOpcion,
+    Importacion,
+    ImportacionPendiente,
+    Producto,
+} from '@/types';
 
 type Props = {
-    productos: Paginated<Producto>;
-    filtros: { buscar: string; eliminados: boolean; tipo: string | null };
-    /** Cantidad de productos por tipo, para los contadores de las pestañas. */
-    conteoPorTipo: Record<string, number>;
+    productos: { data: Producto[] };
     medidas: { id: number; nombre_medida: string }[];
     categorias: CategoriaOpcion[];
+    importaciones: { data: Importacion[] };
+    importacionPendiente: ImportacionPendiente | null;
 };
 
 /** Pestañas del listado: una por tipo de producto, más "Todos". */
@@ -42,17 +49,37 @@ const moneda = new Intl.NumberFormat('es-CO', {
 });
 
 /**
- * Catálogo de productos del tenant, con búsqueda y paginación. Se eliminan de
+ * Catálogo de productos del tenant, con búsqueda y paginación en el navegador. Se eliminan de
  * forma lógica y se restauran desde "Ver eliminados".
  */
 export default function ProductosIndex({
     productos,
-    filtros,
-    conteoPorTipo,
     medidas,
     categorias,
+    importaciones,
+    importacionPendiente,
 }: Props) {
     const can = useCan();
+    const [verEliminados, setVerEliminados] = useState(false);
+    const [tipoElegido, setTipoElegido] = useState('');
+
+    // Filas según "Ver eliminados"; de aquí salen también los contadores de las pestañas.
+    const filasPorEstado = useMemo(
+        () =>
+            productos.data.filter(
+                (producto) => (producto.deleted_at !== null) === verEliminados,
+            ),
+        [productos.data, verEliminados],
+    );
+    const filas = useMemo(
+        () =>
+            tipoElegido === ''
+                ? filasPorEstado
+                : filasPorEstado.filter(
+                      (producto) => producto.categoria_producto === tipoElegido,
+                  ),
+        [filasPorEstado, tipoElegido],
+    );
 
     // El formulario necesita estos catálogos; se adaptan al formato de los selects.
     const opcionesMedida = medidas.map((m) => ({
@@ -81,25 +108,43 @@ export default function ProductosIndex({
                     titulo="Productos"
                     descripcion="Catálogo de lo que vendes"
                     accion={
-                        can('productos.crear') &&
-                        faltantes.length === 0 && (
-                            <FormDialog
-                                titulo="Nuevo producto"
-                                accion={ProductoController.store.form()}
-                                etiquetaGuardar="Crear producto"
-                                ancho="xl"
-                                trigger={<Button>Nuevo producto</Button>}
-                            >
-                                {({ errors }) => (
-                                    <ProductoFields
-                                        errors={errors}
-                                        medidas={opcionesMedida}
-                                        categorias={categorias}
-                                        tipoInicial={filtros.tipo ?? undefined}
-                                    />
+                        <div className="flex flex-wrap gap-2">
+                            <ExportarMenu modulo="productos" />
+                            {can('productos.crear') &&
+                                faltantes.length === 0 && (
+                                    <>
+                                        <ImportarDialog
+                                            tipos={[
+                                                {
+                                                    valor: 'productos',
+                                                    etiqueta: 'Productos',
+                                                },
+                                            ]}
+                                            pendiente={importacionPendiente}
+                                        />
+                                        <FormDialog
+                                            titulo="Nuevo producto"
+                                            accion={ProductoController.store.form()}
+                                            etiquetaGuardar="Crear producto"
+                                            ancho="xl"
+                                            trigger={
+                                                <Button>Nuevo producto</Button>
+                                            }
+                                        >
+                                            {({ errors }) => (
+                                                <ProductoFields
+                                                    errors={errors}
+                                                    medidas={opcionesMedida}
+                                                    categorias={categorias}
+                                                    tipoInicial={
+                                                        tipoElegido || undefined
+                                                    }
+                                                />
+                                            )}
+                                        </FormDialog>
+                                    </>
                                 )}
-                            </FormDialog>
-                        )
+                        </div>
                     }
                 />
 
@@ -121,50 +166,55 @@ export default function ProductosIndex({
                     </p>
                 )}
 
+                <ImportacionesPanel importaciones={importaciones.data} />
+
                 <FilterTabs
-                    url={index.url()}
-                    parametro="tipo"
-                    activa={filtros.tipo ?? ''}
-                    parametrosActuales={{
-                        buscar: filtros.buscar,
-                        eliminados: filtros.eliminados,
-                    }}
+                    activa={tipoElegido}
+                    onCambiar={setTipoElegido}
                     pestanas={PESTANAS_TIPO.map((pestana) => ({
                         ...pestana,
                         cantidad:
                             pestana.valor === ''
-                                ? Object.values(conteoPorTipo).reduce(
-                                      (suma, cantidad) => suma + cantidad,
-                                      0,
-                                  )
-                                : (conteoPorTipo[pestana.valor] ?? 0),
+                                ? filasPorEstado.length
+                                : filasPorEstado.filter(
+                                      (producto) =>
+                                          producto.categoria_producto ===
+                                          pestana.valor,
+                                  ).length,
                     }))}
                 />
 
-                <ListFilters
-                    url={index.url()}
-                    parametrosExtra={filtros.tipo ? { tipo: filtros.tipo } : {}}
-                    buscar={filtros.buscar}
-                    placeholder="Buscar por código, nombre, marca o código de barras"
-                    eliminados={{
-                        parametro: 'eliminados',
-                        etiqueta: 'Ver eliminados',
-                        activo: filtros.eliminados,
-                    }}
-                />
-
                 <CrudTable
-                    filas={productos.data}
+                    filas={filas}
+                    busqueda={{
+                        placeholder:
+                            'Buscar por código, nombre, marca o código de barras',
+                        texto: (p) =>
+                            [p.codigo_producto, p.nombre_producto, p.marca, p.codigo_barra].join(' '),
+                    }}
+                    barra={
+                        <EliminadosToggle
+                            id="ver-eliminados"
+                            etiqueta="Ver eliminados"
+                            activo={verEliminados}
+                            onCambiar={setVerEliminados}
+                        />
+                    }
                     clave={(producto) => producto.id}
                     vacio={
-                        filtros.eliminados
+                        verEliminados
                             ? 'No hay productos eliminados.'
                             : 'No hay productos que coincidan.'
                     }
                     columnas={[
-                        { encabezado: 'N°', celda: (p) => p.numero },
+                        {
+                            encabezado: 'N°',
+                            celda: (p) => p.numero,
+                            valorOrden: (p) => p.numero,
+                        },
                         {
                             encabezado: 'Código',
+                            valorOrden: (p) => p.codigo_producto,
                             celda: (p) => (
                                 <span className="font-mono">
                                     {p.codigo_producto}
@@ -173,6 +223,7 @@ export default function ProductosIndex({
                         },
                         {
                             encabezado: 'Producto',
+                            valorOrden: (p) => p.nombre_producto,
                             celda: (p) => (
                                 <div className="flex items-center gap-3">
                                     {p.imagen_url ? (
@@ -199,6 +250,9 @@ export default function ProductosIndex({
                         },
                         {
                             encabezado: 'Categoría',
+                            filtro: 'lista',
+                            valorFiltro: (p) => p.categoria ?? '',
+                            valorOrden: (p) => p.categoria ?? '',
                             celda: (p) => (
                                 <div>
                                     <p>{p.categoria ?? '—'}</p>
@@ -211,15 +265,20 @@ export default function ProductosIndex({
                         {
                             encabezado: 'Precio detal',
                             alinear: 'derecha',
+                            valorOrden: (p) => p.valor_detal_producto,
                             celda: (p) => moneda.format(p.valor_detal_producto),
                         },
                         {
                             encabezado: 'Stock',
                             alinear: 'derecha',
+                            valorOrden: (p) => p.stock,
                             celda: (p) => p.stock,
                         },
                         {
                             encabezado: 'Estado',
+                            filtro: 'lista',
+                            valorFiltro: (p) =>
+                                p.deleted_at ? 'Eliminado' : p.activo ? 'Activo' : 'Inactivo',
                             celda: (p) =>
                                 p.deleted_at ? (
                                     <Badge variant="destructive">
@@ -284,8 +343,6 @@ export default function ProductosIndex({
                         )
                     }
                 />
-
-                <PaginationFooter datos={productos} />
             </div>
         </>
     );

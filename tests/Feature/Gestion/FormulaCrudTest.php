@@ -253,20 +253,21 @@ class FormulaCrudTest extends TestCase
         $this->put(route('gestion.formulas.update', $formula), $this->datos())->assertSessionHasNoErrors();
     }
 
-    public function test_el_listado_trae_los_ingredientes_y_busca_por_nombre(): void
+    public function test_el_listado_trae_todas_las_formulas_del_tenant_con_sus_ingredientes(): void
     {
         $this->crearFormula('Pintura blanca');
         $this->crearFormula('Barniz');
         $this->crearFormula('Pintura ajena', Tenant::factory()->create());
 
-        $this->get(route('gestion.formulas.index', ['buscar' => 'Pintura']))
+        $this->get(route('gestion.formulas.index'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('gestion/formulas/index')
-                ->has('formulas.data', 1)
-                ->where('formulas.data.0.nombre_formula', 'Pintura blanca')
-                ->where('formulas.data.0.detalles.0.producto', 'RES - Resina')
-                ->where('formulas.data.0.detalles.0.cantidad_producto', 5)
+                ->has('formulas.data', 2)
+                ->where('formulas.data.0.nombre_formula', 'Barniz')
+                ->where('formulas.data.1.nombre_formula', 'Pintura blanca')
+                ->where('formulas.data.1.detalles.0.producto', 'RES - Resina')
+                ->where('formulas.data.1.detalles.0.cantidad_producto', 5)
                 ->has('productos', 2));
     }
 

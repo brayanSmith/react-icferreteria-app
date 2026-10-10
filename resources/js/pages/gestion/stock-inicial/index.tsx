@@ -1,11 +1,14 @@
 import { Head, Link } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 import StockInicialController from '@/actions/App/Http/Controllers/Gestion/StockInicialController';
 import ConfirmDeleteDialog from '@/components/crud/confirm-delete-dialog';
 import CrudTable from '@/components/crud/crud-table';
+import ExportarMenu from '@/components/crud/exportar-menu';
 import FormDialog from '@/components/crud/form-dialog';
-import ListFilters from '@/components/crud/list-filters';
+import ImportacionesPanel from '@/components/crud/importaciones-panel';
+import ImportarDialog from '@/components/crud/importar-dialog';
+import EliminadosToggle from '@/components/crud/eliminados-toggle';
 import PageHeader from '@/components/crud/page-header';
-import PaginationFooter from '@/components/crud/pagination-footer';
 import SelectField from '@/components/crud/select-field';
 import TextField from '@/components/crud/text-field';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +17,12 @@ import { useCan } from '@/hooks/use-can';
 import { index as bodegasIndex } from '@/routes/gestion/bodegas';
 import { index as productosIndex } from '@/routes/gestion/productos';
 import { index, restore } from '@/routes/gestion/stock-inicial';
-import type { OpcionSelect, Paginated, StockInicial } from '@/types';
+import type {
+    Importacion,
+    ImportacionPendiente,
+    OpcionSelect,
+    StockInicial,
+} from '@/types';
 
 const numero = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 2 });
 
@@ -87,23 +95,33 @@ function CamposStock({ stock, errors, productos, bodegas }: CamposProps) {
 }
 
 type Props = {
-    stocks: Paginated<StockInicial>;
-    filtros: { buscar: string; eliminados: boolean };
+    stocks: { data: StockInicial[] };
     productos: OpcionSelect[];
     bodegas: OpcionSelect[];
+    importaciones: { data: Importacion[] };
+    importacionPendiente: ImportacionPendiente | null;
 };
 
 /**
- * Stock inicial de los productos por bodega, con búsqueda y paginación. Se
+ * Stock inicial de los productos por bodega, con búsqueda y paginación en el navegador. Se
  * elimina de forma lógica y se restaura desde "Ver eliminados".
  */
 export default function StockInicialIndex({
     stocks,
-    filtros,
     productos,
     bodegas,
+    importaciones,
+    importacionPendiente,
 }: Props) {
     const can = useCan();
+    const [verEliminados, setVerEliminados] = useState(false);
+    const filas = useMemo(
+        () =>
+            stocks.data.filter(
+                (stock) => (stock.deleted_at !== null) === verEliminados,
+            ),
+        [stocks.data, verEliminados],
+    );
 
     // Para registrar un stock inicial hacen falta productos y bodegas: se avisa qué falta.
     const faltantes = [
@@ -124,25 +142,43 @@ export default function StockInicialIndex({
             <div className="space-y-6 p-4">
                 <PageHeader
                     titulo="Stock inicial"
-                    descripcion="Cantidad con la que arranca cada producto en cada bodega"
+                    descripcion="Cantidad con la que arranca cada producto en cada bodega. Cada registro genera su ingreso en Stock por bodega."
                     accion={
-                        can('stock_inicial.crear') &&
-                        faltantes.length === 0 && (
-                            <FormDialog
-                                titulo="Nuevo stock inicial"
-                                accion={StockInicialController.store.form()}
-                                etiquetaGuardar="Registrar stock"
-                                trigger={<Button>Nuevo stock inicial</Button>}
-                            >
-                                {({ errors }) => (
-                                    <CamposStock
-                                        errors={errors}
-                                        productos={productos}
-                                        bodegas={bodegas}
-                                    />
+                        <div className="flex flex-wrap gap-2">
+                            <ExportarMenu modulo="stock_inicial" />
+                            {can('stock_inicial.crear') &&
+                                faltantes.length === 0 && (
+                                    <>
+                                        <ImportarDialog
+                                            tipos={[
+                                                {
+                                                    valor: 'stock_inicial',
+                                                    etiqueta: 'Stock inicial',
+                                                },
+                                            ]}
+                                            pendiente={importacionPendiente}
+                                        />
+                                        <FormDialog
+                                            titulo="Nuevo stock inicial"
+                                            accion={StockInicialController.store.form()}
+                                            etiquetaGuardar="Registrar stock"
+                                            trigger={
+                                                <Button>
+                                                    Nuevo stock inicial
+                                                </Button>
+                                            }
+                                        >
+                                            {({ errors }) => (
+                                                <CamposStock
+                                                    errors={errors}
+                                                    productos={productos}
+                                                    bodegas={bodegas}
+                                                />
+                                            )}
+                                        </FormDialog>
+                                    </>
                                 )}
-                            </FormDialog>
-                        )
+                        </div>
                     }
                 />
 
@@ -164,28 +200,33 @@ export default function StockInicialIndex({
                     </p>
                 )}
 
-                <ListFilters
-                    url={index.url()}
-                    buscar={filtros.buscar}
-                    placeholder="Buscar por código o nombre del producto"
-                    eliminados={{
-                        parametro: 'eliminados',
-                        etiqueta: 'Ver eliminados',
-                        activo: filtros.eliminados,
-                    }}
-                />
+                <ImportacionesPanel importaciones={importaciones.data} />
 
                 <CrudTable
-                    filas={stocks.data}
+                    filas={filas}
+                    busqueda={{
+                        placeholder: 'Buscar por código o nombre del producto',
+                        texto: (s) =>
+                            [s.codigo_producto, s.nombre_producto, s.bodega].join(' '),
+                    }}
+                    barra={
+                        <EliminadosToggle
+                            id="ver-eliminados"
+                            etiqueta="Ver eliminados"
+                            activo={verEliminados}
+                            onCambiar={setVerEliminados}
+                        />
+                    }
                     clave={(stock) => stock.id}
                     vacio={
-                        filtros.eliminados
+                        verEliminados
                             ? 'No hay registros eliminados.'
                             : 'No hay stock inicial que coincida.'
                     }
                     columnas={[
                         {
                             encabezado: 'Producto',
+                            valorOrden: (s) => s.nombre_producto ?? '',
                             celda: (s) => (
                                 <div>
                                     <p className="font-medium">
@@ -197,14 +238,22 @@ export default function StockInicialIndex({
                                 </div>
                             ),
                         },
-                        { encabezado: 'Bodega', celda: (s) => s.bodega ?? '—' },
+                        {
+                            encabezado: 'Bodega',
+                            celda: (s) => s.bodega ?? '—',
+                            filtro: 'lista',
+                            valorOrden: (s) => s.bodega ?? '',
+                        },
                         {
                             encabezado: 'Cantidad',
                             alinear: 'derecha',
+                            valorOrden: (s) => s.cantidad,
                             celda: (s) => numero.format(s.cantidad),
                         },
                         {
                             encabezado: 'Estado',
+                            filtro: 'lista',
+                            valorFiltro: (s) => (s.deleted_at ? 'Eliminado' : 'Activo'),
                             celda: (s) =>
                                 s.deleted_at ? (
                                     <Badge variant="destructive">
@@ -256,7 +305,7 @@ export default function StockInicialIndex({
                                 {can('stock_inicial.eliminar') && (
                                     <ConfirmDeleteDialog
                                         titulo="¿Eliminar este stock inicial?"
-                                        descripcion="Podrás restaurarlo desde 'Ver eliminados'."
+                                        descripcion="Se anulará su ingreso en Stock por bodega, siempre que esa mercancía no haya salido. Podrás restaurarlo desde 'Ver eliminados'."
                                         accion={StockInicialController.destroy.form(
                                             stock.id,
                                         )}
@@ -266,8 +315,6 @@ export default function StockInicialIndex({
                         )
                     }
                 />
-
-                <PaginationFooter datos={stocks} />
             </div>
         </>
     );

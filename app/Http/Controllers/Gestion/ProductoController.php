@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Gestion;
 
 use App\Actions\Archivos\GuardarArchivoPublico;
+use App\Actions\Importaciones\PanelDeImportacion;
 use App\Enums\Modulo;
 use App\Http\Controllers\Concerns\EsCrudDeGestion;
 use App\Http\Controllers\Controller;
@@ -12,7 +13,6 @@ use App\Models\Categoria;
 use App\Models\Medida;
 use App\Models\Producto;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Arr;
@@ -40,45 +40,21 @@ class ProductoController extends Controller implements HasMiddleware
     }
 
     /**
-     * Lista los productos, filtrando por código, nombre, marca o código de
-     * barras, por tipo de producto (las pestañas) y, opcionalmente, solo los
-     * eliminados. Devuelve además cuántos productos hay en cada pestaña.
+     * Lista todos los productos, eliminados incluidos: la búsqueda, las pestañas
+     * por tipo, el orden, la paginación y el filtro de eliminados los hace el
+     * navegador.
      */
-    public function index(Request $request): Response
+    public function index(): Response
     {
-        $tipo = $request->query('tipo');
-
-        $filtros = [
-            'buscar' => (string) $request->query('buscar', ''),
-            'eliminados' => $request->boolean('eliminados'),
-            // Solo se aceptan los tipos conocidos; cualquier otro valor equivale a "todos".
-            'tipo' => in_array($tipo, GuardarProductoRequest::CATEGORIAS_PRODUCTO, true) ? $tipo : null,
-        ];
-
-        // Base común (búsqueda y eliminados) que comparten el listado y el conteo de las pestañas.
-        $base = fn () => Producto::query()
-            ->when($filtros['eliminados'], fn ($query) => $query->onlyTrashed())
-            ->when($filtros['buscar'] !== '', fn ($query) => $query->where(function ($query) use ($filtros): void {
-                $query->where('codigo_producto', 'like', "%{$filtros['buscar']}%")
-                    ->orWhere('nombre_producto', 'like', "%{$filtros['buscar']}%")
-                    ->orWhere('marca', 'like', "%{$filtros['buscar']}%")
-                    ->orWhere('codigo_barra', 'like', "%{$filtros['buscar']}%");
-            }));
-
-        $productos = $base()
+        $productos = Producto::query()
+            ->withTrashed()
             ->with(['medida:id,nombre_medida', 'categoria:id,nombre_categoria', 'subCategoria:id,nombre_sub_categoria'])
-            ->when($filtros['tipo'], fn ($query, $tipoElegido) => $query->where('categoria_producto', $tipoElegido))
             ->orderBy('nombre_producto')
-            ->paginate(15)
-            ->withQueryString();
+            ->get();
 
         return Inertia::render('gestion/productos/index', [
             'productos' => ProductoResource::collection($productos),
-            'filtros' => $filtros,
-            'conteoPorTipo' => $base()
-                ->selectRaw('categoria_producto, count(*) as total')
-                ->groupBy('categoria_producto')
-                ->pluck('total', 'categoria_producto'),
+            ...PanelDeImportacion::props(['productos']),
             ...$this->catalogosDelFormulario(),
         ]);
     }

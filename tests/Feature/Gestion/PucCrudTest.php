@@ -74,18 +74,19 @@ class PucCrudTest extends TestCase
         $this->assertSame('110505 - Caja menor', $puc->refresh()->concatenar_subcuenta_concepto);
     }
 
-    public function test_el_listado_filtra_por_texto_y_solo_muestra_el_tenant(): void
+    public function test_el_listado_trae_todas_las_cuentas_del_tenant_para_filtrar_en_el_navegador(): void
     {
         $this->crearEn(Puc::class, $this->tenant, $this->datos());
         $this->crearEn(Puc::class, $this->tenant, $this->datos(['subcuenta' => '220505', 'cuenta' => '2205', 'concepto' => 'Proveedores']));
         $this->crearEn(Puc::class, Tenant::factory()->create(), $this->datos(['subcuenta' => '110599', 'concepto' => 'Caja ajena']));
 
-        $this->get(route('gestion.pucs.index', ['buscar' => 'Caja']))
+        $this->get(route('gestion.pucs.index'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('gestion/pucs/index')
-                ->has('cuentas.data', 1)
-                ->where('cuentas.data.0.concepto', 'Caja general'));
+                ->has('cuentas.data', 2)
+                ->where('cuentas.data.0.concepto', 'Caja general')
+                ->where('cuentas.data.1.concepto', 'Proveedores'));
     }
 
     public function test_elimina_una_cuenta(): void

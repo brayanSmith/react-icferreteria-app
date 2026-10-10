@@ -481,6 +481,25 @@ Herramientas
         $this->get(route('gestion.exportar', ['modulo' => 'categorias', 'formato' => 'csv']))->assertForbidden();
     }
 
+    public function test_actualizar_por_importacion_exige_ademas_el_permiso_de_editar(): void
+    {
+        $pendiente = $this->subirArchivo('ID categoría;Categoría
+1;X
+');
+
+        $this->actingAs($this->personalConPermisos($this->tenant, ['categorias.ver', 'categorias.crear']));
+
+        $this->post(route('gestion.importar.confirmar', $pendiente), ['mapeo' => ['id_categoria' => 0, 'categoria' => 1], 'modo' => 'actualizar'])->assertForbidden();
+        $this->post(route('gestion.importar.confirmar', $pendiente), ['mapeo' => ['id_categoria' => 0, 'categoria' => 1], 'modo' => 'ambos'])->assertForbidden();
+        $this->post(route('gestion.importar.confirmar', $pendiente), ['mapeo' => ['categoria' => 1], 'modo' => 'crear'])->assertSessionHasNoErrors();
+
+        $this->actingAs($this->personalConPermisos($this->tenant, ['categorias.ver', 'categorias.crear', 'categorias.editar']));
+        $otro = $this->subirArchivo('ID categoría;Categoría
+1;X
+');
+        $this->post(route('gestion.importar.confirmar', $otro), ['mapeo' => ['id_categoria' => 0, 'categoria' => 1], 'modo' => 'actualizar'])->assertSessionHasNoErrors();
+    }
+
     public function test_no_se_puede_confirmar_la_importacion_de_otro_tenant(): void
     {
         $pendiente = $this->subirArchivo("Categoría\nX\n");

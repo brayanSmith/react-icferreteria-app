@@ -9,7 +9,6 @@ use App\Http\Requests\Gestion\GuardarBodegaRequest;
 use App\Http\Resources\BodegaResource;
 use App\Models\Bodega;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Inertia\Inertia;
@@ -33,21 +32,19 @@ class BodegaController extends Controller implements HasMiddleware
     }
 
     /**
-     * Lista las bodegas activas o, con `eliminadas=1`, las eliminadas.
+     * Lista todas las bodegas, eliminadas incluidas: el filtro de eliminadas lo
+     * hace el navegador.
      */
-    public function index(Request $request): Response
+    public function index(): Response
     {
-        $eliminadas = $request->boolean('eliminadas');
-
         $bodegas = Bodega::query()
             ->withCount(['stockIniciales as productos_count'])
-            ->when($eliminadas, fn ($query) => $query->onlyTrashed())
+            ->withTrashed()
             ->orderBy('nombre_bodega')
             ->get();
 
         return Inertia::render('gestion/bodegas/index', [
             'bodegas' => BodegaResource::collection($bodegas),
-            'eliminadas' => $eliminadas,
         ]);
     }
 

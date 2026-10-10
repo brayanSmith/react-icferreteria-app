@@ -82,6 +82,7 @@ export default function RutasIndex({ rutas }: { rutas: { data: Ruta[] } }) {
                         },
                         {
                             encabezado: 'Descripción',
+                            valorFiltro: (r) => r.descripcion ?? '',
                             celda: (r) => r.descripcion ?? '—',
                         },
                         {

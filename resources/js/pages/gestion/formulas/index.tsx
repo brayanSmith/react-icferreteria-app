@@ -3,20 +3,17 @@ import FormulaController from '@/actions/App/Http/Controllers/Gestion/FormulaCon
 import ConfirmDeleteDialog from '@/components/crud/confirm-delete-dialog';
 import CrudTable from '@/components/crud/crud-table';
 import FormDialog from '@/components/crud/form-dialog';
-import ListFilters from '@/components/crud/list-filters';
 import PageHeader from '@/components/crud/page-header';
-import PaginationFooter from '@/components/crud/pagination-footer';
 import FormulaFields from '@/components/formulas/formula-fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCan } from '@/hooks/use-can';
 import { index } from '@/routes/gestion/formulas';
 import { index as productosIndex } from '@/routes/gestion/productos';
-import type { Formula, Paginated, ProductoIngrediente } from '@/types';
+import type { Formula, ProductoIngrediente } from '@/types';
 
 type Props = {
-    formulas: Paginated<Formula>;
-    filtros: { buscar: string };
+    formulas: { data: Formula[] };
     productos: ProductoIngrediente[];
 };
 
@@ -29,7 +26,7 @@ const INGREDIENTES_VISIBLES = 3;
  * Fórmulas (recetas) del tenant. Cada una se crea y se edita junto con su
  * detalle de ingredientes en un solo modal y un solo guardado.
  */
-export default function FormulasIndex({ formulas, filtros, productos }: Props) {
+export default function FormulasIndex({ formulas, productos }: Props) {
     const can = useCan();
 
     return (
@@ -75,19 +72,18 @@ export default function FormulasIndex({ formulas, filtros, productos }: Props) {
                     </p>
                 )}
 
-                <ListFilters
-                    url={index.url()}
-                    buscar={filtros.buscar}
-                    placeholder="Buscar por nombre de la fórmula"
-                />
-
                 <CrudTable
                     filas={formulas.data}
+                    busqueda={{
+                        placeholder: 'Buscar por nombre de la fórmula',
+                        texto: (f) => f.nombre_formula,
+                    }}
                     clave={(formula) => formula.id}
                     vacio="No hay fórmulas que coincidan."
                     columnas={[
                         {
                             encabezado: 'Fórmula',
+                            valorOrden: (f) => f.nombre_formula,
                             celda: (f) => (
                                 <div>
                                     <p className="font-medium">
@@ -103,6 +99,7 @@ export default function FormulasIndex({ formulas, filtros, productos }: Props) {
                         },
                         {
                             encabezado: 'Ingredientes',
+                            valorFiltro: (f) => f.detalles.map((d) => d.producto).join(' '),
                             celda: (f) => (
                                 <div className="space-y-1">
                                     <Badge variant="secondary">
@@ -174,8 +171,6 @@ export default function FormulasIndex({ formulas, filtros, productos }: Props) {
                         </>
                     )}
                 />
-
-                <PaginationFooter datos={formulas} />
             </div>
         </>
     );

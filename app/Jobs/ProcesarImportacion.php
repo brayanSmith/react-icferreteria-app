@@ -13,6 +13,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Spatie\Permission\PermissionRegistrar;
 use Throwable;
 
 /**
@@ -48,11 +49,17 @@ class ProcesarImportacion implements ShouldQueue
 
         // Se restaura el usuario anterior: con la cola síncrona el trabajo corre dentro de la petición.
         $usuarioAnterior = Auth::user();
+        $permisos = app(PermissionRegistrar::class);
+        $equipoAnterior = $permisos->getPermissionsTeamId();
+
         Auth::setUser($importacion->user);
+        // Los roles de Spatie se asignan por empresa: el trabajo debe saber en cuál corre.
+        $permisos->setPermissionsTeamId($importacion->user->tenant_id);
 
         try {
             $this->procesar($importacion, $importador);
         } finally {
+            $permisos->setPermissionsTeamId($equipoAnterior);
             $usuarioAnterior !== null ? Auth::setUser($usuarioAnterior) : Auth::forgetUser();
         }
     }
@@ -85,9 +92,11 @@ class ProcesarImportacion implements ShouldQueue
                 $datos[$clave] = $posicion === null ? null : ($celdas[$posicion] ?? null);
             }
 
+            $datos = $importador->normalizar($datos);
+
             // En modo "ambos" cada fila decide: con ID actualiza, sin ID crea.
             $modoDeFila = $importador->modoDeFila($datos, $modo);
-            $validador = Validator::make($datos, $importador->reglas($modoDeFila));
+            $validador = Validator::make($datos, $importador->reglas($modoDeFila), $importador->mensajes(), $importador->columnas());
 
             if ($validador->fails()) {
                 $contadores['errores']++;

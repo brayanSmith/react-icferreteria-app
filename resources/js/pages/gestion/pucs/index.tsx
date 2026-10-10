@@ -2,10 +2,11 @@ import { Head } from '@inertiajs/react';
 import PucController from '@/actions/App/Http/Controllers/Gestion/PucController';
 import ConfirmDeleteDialog from '@/components/crud/confirm-delete-dialog';
 import CrudTable from '@/components/crud/crud-table';
+import ExportarMenu from '@/components/crud/exportar-menu';
 import FormDialog from '@/components/crud/form-dialog';
-import ListFilters from '@/components/crud/list-filters';
+import ImportacionesPanel from '@/components/crud/importaciones-panel';
+import ImportarDialog from '@/components/crud/importar-dialog';
 import PageHeader from '@/components/crud/page-header';
-import PaginationFooter from '@/components/crud/pagination-footer';
 import SelectField from '@/components/crud/select-field';
 import TextField from '@/components/crud/text-field';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +14,11 @@ import { Button } from '@/components/ui/button';
 import { useCan } from '@/hooks/use-can';
 import { CLASES_PUC, TIPOS_PUC } from '@/lib/catalogos';
 import { index } from '@/routes/gestion/pucs';
-import type { Paginated, Puc } from '@/types';
+import type {
+    Importacion,
+    ImportacionPendiente,
+    Puc,
+} from '@/types';
 
 /**
  * Campos del formulario de cuenta; los usan los modales de crear y editar.
@@ -71,14 +76,19 @@ function CamposPuc({
 }
 
 type Props = {
-    cuentas: Paginated<Puc>;
-    filtros: { buscar: string };
+    cuentas: { data: Puc[] };
+    importaciones: { data: Importacion[] };
+    importacionPendiente: ImportacionPendiente | null;
 };
 
 /**
  * Plan único de cuentas (PUC) del tenant, con búsqueda y paginación.
  */
-export default function PucsIndex({ cuentas, filtros }: Props) {
+export default function PucsIndex({
+    cuentas,
+    importaciones,
+    importacionPendiente,
+}: Props) {
     const can = useCan();
 
     return (
@@ -90,47 +100,72 @@ export default function PucsIndex({ cuentas, filtros }: Props) {
                     titulo="Plan de cuentas (PUC)"
                     descripcion="Cuentas contables que usa tu empresa"
                     accion={
-                        can('pucs.crear') && (
-                            <FormDialog
-                                titulo="Nueva cuenta"
-                                accion={PucController.store.form()}
-                                etiquetaGuardar="Crear cuenta"
-                                trigger={<Button>Nueva cuenta</Button>}
-                            >
-                                {({ errors }) => <CamposPuc errors={errors} />}
-                            </FormDialog>
-                        )
+                        <div className="flex flex-wrap gap-2">
+                            <ExportarMenu modulo="pucs" />
+                            {can('pucs.crear') && (
+                                <>
+                                    <ImportarDialog
+                                        tipos={[
+                                            {
+                                                valor: 'pucs',
+                                                etiqueta: 'Plan de cuentas',
+                                            },
+                                        ]}
+                                        pendiente={importacionPendiente}
+                                    />
+                                    <FormDialog
+                                        titulo="Nueva cuenta"
+                                        accion={PucController.store.form()}
+                                        etiquetaGuardar="Crear cuenta"
+                                        trigger={<Button>Nueva cuenta</Button>}
+                                    >
+                                        {({ errors }) => (
+                                            <CamposPuc errors={errors} />
+                                        )}
+                                    </FormDialog>
+                                </>
+                            )}
+                        </div>
                     }
                 />
 
-                <ListFilters
-                    url={index.url()}
-                    buscar={filtros.buscar}
-                    placeholder="Buscar por cuenta, subcuenta o concepto"
-                />
+                <ImportacionesPanel importaciones={importaciones.data} />
 
                 <CrudTable
                     filas={cuentas.data}
+                    busqueda={{
+                        placeholder: 'Buscar por cuenta, subcuenta o concepto',
+                        texto: (c) =>
+                            [c.cuenta, c.subcuenta, c.concepto].join(' '),
+                    }}
                     clave={(cuenta) => cuenta.id}
                     vacio="No hay cuentas que coincidan."
                     columnas={[
                         {
                             encabezado: 'Clase',
+                            filtro: 'lista',
+                            valorFiltro: (c) => CLASES_PUC[c.tipo] ?? c.tipo,
                             celda: (c) => (
                                 <Badge variant="secondary">
                                     {CLASES_PUC[c.tipo] ?? c.tipo}
                                 </Badge>
                             ),
                         },
-                        { encabezado: 'Cuenta', celda: (c) => c.cuenta },
+                        {
+                            encabezado: 'Cuenta',
+                            celda: (c) => c.cuenta,
+                            valorOrden: (c) => c.cuenta,
+                        },
                         {
                             encabezado: 'Subcuenta',
+                            valorOrden: (c) => c.subcuenta,
                             celda: (c) => (
                                 <span className="font-mono">{c.subcuenta}</span>
                             ),
                         },
                         {
                             encabezado: 'Concepto',
+                            valorFiltro: (c) => c.concepto,
                             celda: (c) => (
                                 <span className="font-medium">
                                     {c.concepto}
@@ -139,6 +174,7 @@ export default function PucsIndex({ cuentas, filtros }: Props) {
                         },
                         {
                             encabezado: 'Descripción',
+                            valorFiltro: (c) => c.descripcion ?? '',
                             celda: (c) => c.descripcion ?? '—',
                         },
                     ]}
@@ -177,8 +213,6 @@ export default function PucsIndex({ cuentas, filtros }: Props) {
                         </>
                     )}
                 />
-
-                <PaginationFooter datos={cuentas} />
             </div>
         </>
     );

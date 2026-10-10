@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Gestion;
 
+use App\Actions\Importaciones\PanelDeImportacion;
 use App\Actions\Tenants\CreateTenantUser;
 use App\Actions\Tenants\UpdateTenantUser;
 use App\Http\Controllers\Controller;
@@ -53,6 +54,7 @@ class UserController extends Controller implements HasMiddleware
                 ->where('tenant_id', $tenantId)
                 ->orderBy('name')
                 ->get(['id', 'name']),
+            ...PanelDeImportacion::props(['usuarios']),
         ]);
     }
 

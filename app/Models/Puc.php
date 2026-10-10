@@ -22,4 +22,12 @@ class Puc extends Model
         'descripcion',
         'concatenar_subcuenta_concepto',
     ];
+
+    /**
+     * Texto "subcuenta - concepto" que usan los selectores de cuentas.
+     */
+    public static function textoConcatenado(string $subcuenta, string $concepto): string
+    {
+        return "{$subcuenta} - {$concepto}";
+    }
 }

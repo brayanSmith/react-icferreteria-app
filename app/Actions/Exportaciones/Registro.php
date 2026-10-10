@@ -15,6 +15,12 @@ class Registro
     {
         return [
             'categorias' => ExportadorCategorias::class,
+            'pucs' => ExportadorPucs::class,
+            'productos' => ExportadorProductos::class,
+            'clientes' => ExportadorClientes::class,
+            'usuarios' => ExportadorUsuarios::class,
+            'stock_inicial' => ExportadorStockInicial::class,
+            'stock_bodegas' => ExportadorStockBodegas::class,
         ];
     }
 

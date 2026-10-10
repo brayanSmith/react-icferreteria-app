@@ -71,6 +71,12 @@ export const TIPOS_COMPRA: OpcionDeSelect[] = [
     { valor: 'IMPORTADO', etiqueta: 'Importado' },
 ];
 
+/** Tipos de movimiento de inventario. */
+export const TIPOS_MOVIMIENTO_STOCK: OpcionDeSelect[] = [
+    { valor: 'INGRESO', etiqueta: 'Ingreso (entra mercancía)' },
+    { valor: 'SALIDA', etiqueta: 'Salida (sale mercancía)' },
+];
+
 /** Devuelve la etiqueta legible de un valor, o el valor mismo si no se conoce. */
 export function etiquetaDe(
     opciones: OpcionDeSelect[],

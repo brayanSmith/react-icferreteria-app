@@ -163,24 +163,23 @@ class ClienteCrudTest extends TestCase
             ->assertSessionHasErrors('rut');
     }
 
-    public function test_el_listado_busca_y_separa_activos_de_eliminados(): void
+    public function test_el_listado_trae_activos_y_eliminados_del_tenant_para_filtrar_en_el_navegador(): void
     {
         $this->crearCliente(['razon_social' => 'Tornillos del Sur', 'numero_documento' => '1']);
         $this->crearCliente(['razon_social' => 'Pinturas Pasto', 'numero_documento' => '2']);
         $this->crearCliente(['razon_social' => 'Cerrado SA', 'numero_documento' => '3'])->delete();
         $this->crearCliente(['razon_social' => 'Tornillos ajenos', 'numero_documento' => '4'], Tenant::factory()->create());
 
-        $this->get(route('gestion.clientes.index', ['buscar' => 'Tornillos']))
+        $this->get(route('gestion.clientes.index'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('gestion/clientes/index')
-                ->has('clientes.data', 1)
-                ->where('clientes.data.0.razon_social', 'Tornillos del Sur'));
-
-        $this->get(route('gestion.clientes.index', ['eliminados' => 1]))
-            ->assertInertia(fn ($page) => $page
-                ->has('clientes.data', 1)
-                ->where('clientes.data.0.razon_social', 'Cerrado SA'));
+                ->has('clientes.data', 3)
+                ->where('clientes.data.0.razon_social', 'Cerrado SA')
+                ->whereNot('clientes.data.0.deleted_at', null)
+                ->where('clientes.data.1.razon_social', 'Pinturas Pasto')
+                ->where('clientes.data.1.deleted_at', null)
+                ->where('clientes.data.2.razon_social', 'Tornillos del Sur'));
     }
 
     public function test_el_listado_trae_las_rutas_y_los_comerciales_solo_del_tenant(): void

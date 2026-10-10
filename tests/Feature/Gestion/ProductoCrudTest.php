@@ -265,35 +265,33 @@ class ProductoCrudTest extends TestCase
                 ->where('categorias.0.sub_categorias.0.nombre_sub_categoria', 'Manuales'));
     }
 
-    public function test_el_listado_busca_y_separa_activos_de_eliminados(): void
+    public function test_el_listado_trae_activos_y_eliminados_para_filtrar_en_el_navegador(): void
     {
         $this->crearProductoEn($this->tenant, $this->catalogos, ['codigo_producto' => 'A', 'nombre_producto' => 'Martillo']);
         $this->crearProductoEn($this->tenant, $this->catalogos, ['codigo_producto' => 'B', 'nombre_producto' => 'Serrucho']);
         $this->crearProductoEn($this->tenant, $this->catalogos, ['codigo_producto' => 'C', 'nombre_producto' => 'Cincel'])->delete();
 
-        $this->get(route('gestion.productos.index', ['buscar' => 'Martillo']))
-            ->assertInertia(fn ($page) => $page->has('productos.data', 1)->where('productos.data.0.codigo_producto', 'A'));
-
-        $this->get(route('gestion.productos.index', ['eliminados' => 1]))
-            ->assertInertia(fn ($page) => $page->has('productos.data', 1)->where('productos.data.0.codigo_producto', 'C'));
+        $this->get(route('gestion.productos.index'))
+            ->assertInertia(fn ($page) => $page
+                ->has('productos.data', 3)
+                ->where('productos.data.0.codigo_producto', 'C')
+                ->whereNot('productos.data.0.deleted_at', null)
+                ->where('productos.data.1.codigo_producto', 'A')
+                ->where('productos.data.1.deleted_at', null)
+                ->where('productos.data.2.codigo_producto', 'B'));
     }
 
-    public function test_el_listado_filtra_por_pestana_de_tipo_y_cuenta_cada_una(): void
+    public function test_el_listado_trae_el_tipo_de_cada_producto_para_las_pestanas(): void
     {
         $this->crearProductoEn($this->tenant, $this->catalogos, ['codigo_producto' => 'MP-001', 'categoria_producto' => Producto::MATERIA_PRIMA]);
         $this->crearProductoEn($this->tenant, $this->catalogos, ['codigo_producto' => 'MP-002', 'categoria_producto' => Producto::MATERIA_PRIMA]);
         $this->crearProductoEn($this->tenant, $this->catalogos, ['codigo_producto' => 'PT-001', 'categoria_producto' => 'PRODUCTO_TERMINADO']);
 
-        $this->get(route('gestion.productos.index', ['tipo' => Producto::MATERIA_PRIMA]))
+        $this->get(route('gestion.productos.index'))
             ->assertInertia(fn ($page) => $page
-                ->has('productos.data', 2)
-                ->where('filtros.tipo', Producto::MATERIA_PRIMA)
-                ->where('conteoPorTipo.'.Producto::MATERIA_PRIMA, 2)
-                ->where('conteoPorTipo.PRODUCTO_TERMINADO', 1));
-
-        // Un tipo desconocido equivale a "todos".
-        $this->get(route('gestion.productos.index', ['tipo' => 'INVENTADO']))
-            ->assertInertia(fn ($page) => $page->has('productos.data', 3)->where('filtros.tipo', null));
+                ->has('productos.data', 3)
+                ->where('productos.data.0.categoria_producto', Producto::MATERIA_PRIMA)
+                ->where('productos.data.2.categoria_producto', 'PRODUCTO_TERMINADO'));
     }
 
     public function test_elimina_de_forma_logica_y_restaura(): void

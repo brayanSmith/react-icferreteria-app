@@ -11,7 +11,6 @@ use App\Http\Resources\FormulaResource;
 use App\Models\Formula;
 use App\Models\Producto;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Inertia\Inertia;
@@ -37,24 +36,19 @@ class FormulaController extends Controller implements HasMiddleware
     }
 
     /**
-     * Lista las fórmulas con sus ingredientes, filtrando por nombre. Incluye
-     * los productos que se pueden usar como ingredientes (solo materia prima).
+     * Lista todas las fórmulas: la búsqueda, el orden y la paginación las hace
+     * el navegador.
      */
-    public function index(Request $request): Response
+    public function index(): Response
     {
-        $buscar = (string) $request->query('buscar', '');
-
         $formulas = Formula::query()
             // Un producto eliminado sigue apareciendo en las fórmulas que ya lo usaban.
             ->with(['detalleFormulas.producto' => fn ($query) => $query->withTrashed()->with('medida:id,nombre_medida')])
-            ->when($buscar !== '', fn ($query) => $query->where('nombre_formula', 'like', "%{$buscar}%"))
             ->orderBy('nombre_formula')
-            ->paginate(15)
-            ->withQueryString();
+            ->get();
 
         return Inertia::render('gestion/formulas/index', [
             'formulas' => FormulaResource::collection($formulas),
-            'filtros' => ['buscar' => $buscar],
             // Una fórmula es una receta: solo se ofrecen insumos (materia prima).
             'productos' => Producto::query()
                 ->materiaPrima()
